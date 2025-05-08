@@ -10,12 +10,7 @@ import {
   Keyboard,
   Table as TableTennisIcon
 } from 'lucide-react'
-
-interface GameCardProps {
-  icon: React.ReactNode;
-  title: string;
-  link: string;
-}
+import { GameCard } from '@/components/GameCard'
 
 export default function Home() {
   const { resolvedTheme } = useTheme()
@@ -72,7 +67,7 @@ export default function Home() {
           </h1>
 
           <p className="text-2xl md:text-[1.6rem] font-rajdhani font-semibold text-white/90 max-w-xl mt-6">
-            Can your favourite L2 keep up with you?
+            Can your favourite Ethereum L2 keep up with you?
           </p>
           <Link
             href="/games"
@@ -118,23 +113,3 @@ export default function Home() {
   )
 }
 
-// Game Card Component
-function GameCard({ icon, title, link }: GameCardProps) {
-  return (
-    <Link href={link} className="group">
-      <div className="flex flex-col rounded-lg border border-border bg-card/40 p-6 hover:shadow-md hover:shadow-purple-500/10 transition-all duration-200 h-full">
-        <div className="flex justify-center items-center h-16 w-16 rounded-full bg-secondary/30 mb-4 mx-auto">
-          {icon}
-        </div>
-
-        <h3 className="text-xl font-bold text-center mb-1">{title}</h3>
-
-        <div className="mt-auto pt-4">
-          <div className="w-full text-center rounded-md border border-border px-3 py-2 text-sm bg-secondary/40 group-hover:bg-primary/60 group-hover:text-primary-foreground transition-colors">
-            Play Now
-          </div>
-        </div>
-      </div>
-    </Link>
-  )
-}
