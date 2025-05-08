@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Press_Start_2P } from "next/font/google";
+import { Geist, Geist_Mono, Press_Start_2P, Rajdhani } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider"
 import { headers } from 'next/headers'
 import "./globals.css";
-import Navbar from "@/components/Navbar";
+import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import ContextProvider from "@/context";
 import { useAppKitTheme } from "@reown/appkit/react";
@@ -25,11 +25,16 @@ const pressStart2P = Press_Start_2P({
   subsets: ['latin'],
 });
 
+const rajdhani = Rajdhani({
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-rajdhani',
+  subsets: ['latin']
+})
 
 
 export const metadata: Metadata = {
-  title: "Samarth Saxena | Portfolio",
-  description: "Portfolio showcasing my dev work and content",
+  title: "Blaze Arcade",
+  description: "Latency benchmarking games for your favourite L2s",
 };
 
 
@@ -44,7 +49,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${pressStart2P.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${pressStart2P.variable} ${rajdhani.variable} antialiased`}
       >
         <ThemeProvider
           attribute="class"
