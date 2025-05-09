@@ -96,7 +96,7 @@ export function NetworkSelector({
             }
           }}
           className={cn(
-            "px-2 py-1 rounded-md text-sm flex items-center gap-1.5 transition-colors w-full justify-center",
+            "px-2 py-1 rounded-md text-sm flex items-center gap-1.5 hover:cursor-pointer transition-colors w-full justify-center",
             isWeb3Enabled
               ? "bg-green-500/10 text-green-500 hover:bg-green-500/20"
               : "bg-red-500/10 text-red-500 hover:bg-red-500/20"
