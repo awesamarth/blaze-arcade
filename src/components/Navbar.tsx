@@ -60,7 +60,7 @@ export const Navbar = () => {
         isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible md:opacity-100 md:visible"
       )}>
         <Link 
-          href="/games" 
+          href="/play" 
           className={cn(
             "transition-colors",
             isDark 

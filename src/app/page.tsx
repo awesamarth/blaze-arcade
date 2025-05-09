@@ -67,10 +67,10 @@ export default function Home() {
           </h1>
 
           <p className="text-2xl md:text-[1.6rem] font-rajdhani font-semibold text-white/90 max-w-xl mt-6">
-            Can your favourite Ethereum L2 keep up with you?
+            Can your favourite EVM chain keep up with you?
           </p>
           <Link
-            href="/games"
+            href="/play"
             className="mt-12 px-8 py-4 text-lg font-medium rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-purple-500/25 hover:scale-105 relative overflow-hidden"
           >
             <span className="relative z-10 ">START PLAYING</span>
@@ -85,28 +85,28 @@ export default function Home() {
         <GameCard
           icon={<AlertTriangle className="text-red-500" size={32} />}
           title="Reaction Time"
-          link="/games/reaction-time"
+          link="/play/reaction-time"
         />
 
         {/* Game Card - Typing Test */}
         <GameCard
           icon={<Keyboard className="text-purple-500" size={32} />}
           title="Typing Test"
-          link="/games/typing-test"
+          link="/play/typing-test"
         />
 
         {/* Game Card - Aim Test */}
         <GameCard
           icon={<Target className="text-purple-500" size={32} />}
           title="Aim Test"
-          link="/games/aim-test"
+          link="/play/aim-test"
         />
 
         {/* Game Card - Ping Pong */}
         <GameCard
           icon={<TableTennisIcon className="text-yellow-400" size={32} />}
           title="Ping Pong"
-          link="/games/ping-pong"
+          link="/play/ping-pong"
         />
       </section>
     </div>
