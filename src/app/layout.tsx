@@ -5,9 +5,7 @@ import { headers } from 'next/headers'
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import ContextProvider from "@/context";
-import { useAppKitTheme } from "@reown/appkit/react";
-import { useTheme } from "next-themes";
+import Providers from "@/context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -57,13 +55,11 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <ContextProvider cookies={cookies}>
-
-
+          <Providers>
             <Navbar />
             {children}
             <Footer />
-          </ContextProvider>
+          </Providers>
         </ThemeProvider>
       </body>
     </html>

@@ -16,18 +16,17 @@ const port: number = 3000;
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
-// Create a simple global nonce tracker
 
 const account = privateKeyToAccount(process.env.LOCAL_PRIVATE_KEY as `0x${string}`)
 const minifiedAbi = [
-      {
-        name: "update",
-        type: "function",
-        inputs: [],
-        outputs: [],
-        stateMutability: "nonpayable"
-      }
-    ];
+  {
+    name: "update",
+    type: "function",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable"
+  }
+];
 const megaEthClient = createWalletClient({
   account: account,
   chain: megaethTestnet,
@@ -35,10 +34,10 @@ const megaEthClient = createWalletClient({
 
 }).extend(publicActions)
 
-let megaNonce:number = await megaEthClient.getTransactionCount({
-    address: account.address
-  });
-  console.log(`: ${megaNonce}`);;
+let megaNonce: number = await megaEthClient.getTransactionCount({
+  address: account.address
+});
+console.log(`: ${megaNonce}`);
 
 
 
@@ -46,13 +45,13 @@ let megaNonce:number = await megaEthClient.getTransactionCount({
 // Update pre-signed transaction with current nonce
 async function updateMegaEthSignedTx() {
   console.log(`Using nonce: ${megaNonce}`);
-  
+
   const request = await megaEthClient.prepareTransactionRequest({
     to: '0x0D0ba0Ea8d031d093eA36c1A1176B066Fd08fadB',
     data: '0xa2e62045',
-    megaNonce 
+    megaNonce
   });
-  
+
   return await megaEthClient.signTransaction(request);
 }
 
@@ -62,6 +61,7 @@ let megaEthSignedTx = null;
 updateMegaEthSignedTx().then(tx => {
   megaEthSignedTx = tx;
 });
+console.log(megaEthSignedTx)
 
 const foundryClient = createWalletClient({
   account: account,
@@ -70,104 +70,90 @@ const foundryClient = createWalletClient({
 }).extend(publicActions)
 
 
-async function megaEthUpdate() {
-  try {
-    // Ensure we have a signed tx
-    //@ts-ignore
-    if (!megaEthSignedTx) {
-      megaEthSignedTx = await updateMegaEthSignedTx();
-    }
-
-    await megaEthClient.request({
-      //@ts-ignore
-      method: 'realtime_sendRawTransaction',
-      params: [megaEthSignedTx]
-    });
-    
-    // Increment nonce after successful transaction
-    megaNonce++;
-    console.log(`Mega nonce incremented to: ${megaNonce}`);
-    
-    // Prepare next transaction in background
-    megaEthSignedTx = null;
-    updateMegaEthSignedTx().then(tx => {
-      megaEthSignedTx = tx;
-    }).catch(console.error);
-  } catch (error) {
-    // If nonce is too low, reset it and try again
-    //@ts-ignore
-    if (error.message?.includes('nonce too low') || error.details?.includes('nonce too low')) {
-      console.log("Nonce too low, resetting nonce");
-      //@ts-ignore
-      currentNonce = null;
-      megaEthSignedTx = null;
-      megaNonce++
-      return megaEthUpdate();
-    }
-    console.error("Error in megaEthUpdate:", error);
-    throw error;
-  }
-}
-
-async function foundryUpdate(){
-  try {
-    // Get current nonce for foundry
-    
-    const hash = await foundryClient.writeContract({
-      address: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
-      abi: minifiedAbi,
-      functionName: 'update',
-    });
-
-    // Wait for transaction receipt
-    const receipt = await foundryClient.waitForTransactionReceipt({
-      hash
-    });
-    
-    return receipt;
-  } catch (error) {
-    console.error(error)
-  }
-}
-
-
-
-
-
 app.prepare().then(() => {
   const httpServer = createServer(handler);
 
-  const io = new Server(httpServer);
+  // Add perMessageDeflate option to reduce memory usage
+  const io = new Server(httpServer, {
+    perMessageDeflate: false // This helps reduce memory fragmentation
+  });
 
-  io.on("connection", (socket: Socket) => {
+  io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
-
-    // Handle socket connections here
-    // Example: socket.on("message", (data) => { ... }) 
-
-    socket.on("yepworking", () => {
-      console.log("yep ts working ")
-    })
-
-    socket.on("update", async({ chain }) => {
-
-      console.log("update command received with chain: ", chain)
-      if (chain!=="megaeth"){
-        await foundryUpdate()
+    
+    // Store event handlers for later cleanup
+    const updateHandler = async ({ chain }:{chain:any}) => {
+      console.log("update command received with chain: ", chain);
+      if (chain !== "megaeth") {
+        await foundryUpdate();
+      } else {
+        await megaEthUpdate();
       }
-      else {
-        await megaEthUpdate()
+    };
+
+    const yepworkingHandler = () => {
+      console.log("yep ts working");
+    };
+
+    // Define update functions inside the connection scope
+    async function megaEthUpdate() {
+      try {
+        const hash = await megaEthClient.writeContract({
+          address: '0x0D0ba0Ea8d031d093eA36c1A1176B066Fd08fadB',
+          abi: minifiedAbi,
+          functionName: 'update',
+        });
+
+        // Wait for transaction receipt
+        await megaEthClient.waitForTransactionReceipt({
+          hash
+        });
+        socket.emit("update_complete");
+      } catch (error) {
+        console.error("Error in megaEthUpdate:", error);
+        // Still emit completion to prevent hanging connections
+        socket.emit("update_complete");
       }
-      
-      socket.emit("update_complete")
-    })
+    }
 
+    async function foundryUpdate() {
+      try {
+        const hash = await foundryClient.writeContract({
+          address: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+          abi: minifiedAbi,
+          functionName: 'update',
+        });
 
+        // Wait for transaction receipt
+        const receipt = await foundryClient.waitForTransactionReceipt({
+          hash
+        });
+        socket.emit("update_complete");
+        return receipt;
+      } catch (error) {
+        console.error("Error in foundryUpdate:", error);
+        // Still emit completion to prevent hanging connections
+        socket.emit("update_complete");
+      }
+    }
 
+    // Add event listeners
+    socket.on("yepworking", yepworkingHandler);
+    socket.on("update", updateHandler);
+
+    // Proper cleanup on disconnect
+    socket.on("disconnect", () => {
+      console.log("Client disconnected:", socket.id);
+      // Remove all listeners to prevent memory leaks
+      socket.removeAllListeners();
+      // Explicitly remove specific listeners
+      socket.off("yepworking", yepworkingHandler);
+      socket.off("update", updateHandler);
+    });
   });
 
   httpServer
-    .once("error", (err: Error) => {
+    .once("error", (err) => {
       console.error(err);
       process.exit(1);
     })

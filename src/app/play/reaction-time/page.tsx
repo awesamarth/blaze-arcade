@@ -8,12 +8,11 @@ import { cn } from '@/lib/utils'
 import { NetworkSelector, NETWORKS, Network } from '@/components/NetworkSelector'
 import { socket } from '@/app/socket'
 
-// Enum for game states
 enum GameState {
   IDLE = 'idle',
   WAITING = 'waiting',
   READY = 'ready',
-  PENDING = 'pending', // New state for pending transaction
+  PENDING = 'pending',
   FINISHED = 'finished',
   GAME_OVER = 'game_over'
 }
@@ -21,7 +20,6 @@ enum GameState {
 export default function ReactionTimeGame() {
   const { resolvedTheme } = useTheme()
 
-  // States
   const [gameState, setGameState] = useState<GameState>(GameState.IDLE)
   const [attempts, setAttempts] = useState<number>(0)
   const [results, setResults] = useState<{ reactionTime: number, blockchainTime: number }[]>([])
@@ -33,7 +31,6 @@ export default function ReactionTimeGame() {
   const [pendingAttempt, setPendingAttempt] = useState(0)
   const [txStartTime, setTxStartTime] = useState(0)
 
-  // Refs for timeouts and timing
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const readyTimeRef = useRef<number>(0)
   const frameRequestRef = useRef<number | null>(null)
@@ -42,42 +39,38 @@ export default function ReactionTimeGame() {
   const isDark = resolvedTheme === 'dark'
 
   useEffect(() => {
-    socket.emit('yepworking');
-
-    // Listen for transaction completion
     socket.on('update_complete', (data) => {
       if (gameState === GameState.PENDING) {
         const blockchainTime = Math.round(performance.now() - txStartTime);
-        
-        // Store this attempt's results with the actual blockchain time
         const reactionTime = results[pendingAttempt - 1]?.reactionTime || 0;
-        
-        // Update the results
+
         const newResults = [...results];
         newResults[pendingAttempt - 1] = { reactionTime, blockchainTime };
         setResults(newResults);
-        
-        // Update total blockchain time
-        setTotalBlockchainTime(prev => prev - (results[pendingAttempt - 1]?.blockchainTime || 0) + blockchainTime);
-        
-        // Hide toast
+
+        setTotalBlockchainTime(prev =>
+          prev - (results[pendingAttempt - 1]?.blockchainTime || 0) + blockchainTime
+        );
+
         setShowToast(false);
-        
-        // Move to next attempt or finish
+
         if (pendingAttempt < 5) {
           setGameState(GameState.WAITING);
-          
+
           const delay = Math.floor(Math.random() * 4000) + 1000;
           clearAllTimers();
-          
-          timeoutRef.current = setTimeout(() => {
-            frameRequestRef.current = requestAnimationFrame(() => {
+
+          const start = performance.now();
+          const checkTime = (now: number) => {
+            if (now - start >= delay) {
               setGameState(GameState.READY);
-              readyTimeRef.current = performance.now();
-            });
-          }, delay);
+              readyTimeRef.current = now;
+            } else {
+              frameRequestRef.current = requestAnimationFrame(checkTime);
+            }
+          };
+          frameRequestRef.current = requestAnimationFrame(checkTime);
         } else {
-          // Game finished after 5 attempts
           setGameState(GameState.FINISHED);
         }
       }
@@ -88,57 +81,42 @@ export default function ReactionTimeGame() {
       socket.off('game_ending');
       socket.off('game_ended');
       socket.off('update_complete');
-      
       if (toastTimeoutRef.current) {
         clearTimeout(toastTimeoutRef.current);
       }
     };
   }, [gameState, pendingAttempt, results]);
 
-  // Transaction function that returns a promise
   const sendTransaction = async () => {
-    // Set transaction start time
     setTxStartTime(performance.now());
-    
-    // Change state to PENDING
     setGameState(GameState.PENDING);
-    
-    // Show toast notification
     setShowToast(true);
-    
-    // Auto-hide toast after 5 seconds if no response
+
     if (toastTimeoutRef.current) {
       clearTimeout(toastTimeoutRef.current);
     }
-    
-    // Emit socket event to start transaction
+
     socket.emit("update", { chain: selectedNetwork.id });
-    
   };
 
-  // Clear all timers and animation frames
   const clearAllTimers = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
-
     if (frameRequestRef.current) {
       cancelAnimationFrame(frameRequestRef.current);
       frameRequestRef.current = null;
     }
-    
     if (toastTimeoutRef.current) {
       clearTimeout(toastTimeoutRef.current);
       toastTimeoutRef.current = null;
     }
   }, []);
 
-  // Start the game
   const startGame = useCallback(() => {
-    if (gameState !== GameState.IDLE && gameState !== GameState.FINISHED && gameState !== GameState.GAME_OVER) return;
+    if (![GameState.IDLE, GameState.FINISHED, GameState.GAME_OVER].includes(gameState)) return;
 
-    // Clear any existing timers
     clearAllTimers();
 
     setGameState(GameState.WAITING);
@@ -149,24 +127,24 @@ export default function ReactionTimeGame() {
     setPendingAttempt(0);
     setShowToast(false);
 
-    // Random delay between 1-5 seconds
     const delay = Math.floor(Math.random() * 4000) + 1000;
+    const start = performance.now();
 
-    // Schedule transition to READY state
-    timeoutRef.current = setTimeout(() => {
-      frameRequestRef.current = requestAnimationFrame(() => {
+    const checkTime = (now: number) => {
+      if (now - start >= delay) {
         setGameState(GameState.READY);
-        readyTimeRef.current = performance.now();
-      });
-    }, delay);
+        readyTimeRef.current = now;
+      } else {
+        frameRequestRef.current = requestAnimationFrame(checkTime);
+      }
+    };
+    frameRequestRef.current = requestAnimationFrame(checkTime);
   }, [gameState, clearAllTimers]);
 
-  // Clean up timeouts and animation frames on unmount
   useEffect(() => {
     return clearAllTimers;
   }, [clearAllTimers]);
 
-  // Handle user click
   const handleClick = useCallback(async () => {
     switch (gameState) {
       case GameState.IDLE:
@@ -176,131 +154,96 @@ export default function ReactionTimeGame() {
         break;
 
       case GameState.WAITING:
-        // Clicked too early - game over
-        clearAllTimers(); // Important: clear all timers
+        clearAllTimers();
         setGameState(GameState.GAME_OVER);
         break;
-        
+
       case GameState.PENDING:
-        // Do nothing if transaction is pending
         break;
 
       case GameState.READY:
-        // Record click time and calculate reaction time using high-precision timer
         const now = performance.now();
         const reactionTime = Math.round(now - readyTimeRef.current);
-        
-        // Set current attempt number
+
         const currentAttempt = attempts + 1;
         setPendingAttempt(currentAttempt);
 
-        // Only calculate blockchain time if Web3 is enabled
         if (isWeb3Enabled) {
-          // Initially set a placeholder blockchain time
-          const placeholderBlockchainTime = 0;
-          
-          // Store this attempt's results with placeholder blockchain time
-          const newResults = [...results, { reactionTime, blockchainTime: placeholderBlockchainTime }];
-          setResults(newResults);
-          
-          // Update total times
-          setTotalReactionTime(prev => prev + reactionTime);
-          
-          // Increment attempts counter
-          setAttempts(prev => prev + 1);
-          
-          // Send transaction - this will update the game state to PENDING
-          await sendTransaction();
-        } else {
-          // For non-Web3 mode, just proceed normally
           const newResults = [...results, { reactionTime, blockchainTime: 0 }];
           setResults(newResults);
           setTotalReactionTime(prev => prev + reactionTime);
-          
+          setAttempts(prev => prev + 1);
+          await sendTransaction();
+        } else {
+          const newResults = [...results, { reactionTime, blockchainTime: 0 }];
+          setResults(newResults);
+          setTotalReactionTime(prev => prev + reactionTime);
+
           if (attempts < 4) {
             setAttempts(prev => prev + 1);
             setGameState(GameState.WAITING);
-            
+
             const delay = Math.floor(Math.random() * 4000) + 1000;
             clearAllTimers();
-            
-            timeoutRef.current = setTimeout(() => {
-              frameRequestRef.current = requestAnimationFrame(() => {
+
+            const start = performance.now();
+            const checkTime = (now: number) => {
+              if (now - start >= delay) {
                 setGameState(GameState.READY);
-                readyTimeRef.current = performance.now();
-              });
-            }, delay);
+                readyTimeRef.current = now;
+              } else {
+                frameRequestRef.current = requestAnimationFrame(checkTime);
+              }
+            };
+            frameRequestRef.current = requestAnimationFrame(checkTime);
           } else {
             setGameState(GameState.FINISHED);
           }
         }
         break;
-
-      default:
-        break;
     }
   }, [gameState, results, attempts, startGame, isWeb3Enabled, selectedNetwork.id, clearAllTimers]);
 
-  // Handle Web3 toggle
   const handleToggleWeb3 = (enabled: boolean) => {
-    if (gameState === GameState.PENDING) return; // Prevent toggling during pending transaction
+    if (gameState === GameState.PENDING) return;
     setIsWeb3Enabled(enabled);
   };
 
-  // Handle network selection
   const handleNetworkSelect = (network: Network) => {
-    if (gameState === GameState.PENDING) return; // Prevent switching network during pending transaction
+    if (gameState === GameState.PENDING) return;
     setSelectedNetwork(network);
   };
 
-  // Determine background color based on game state
   const getContainerStyle = () => {
     switch (gameState) {
-      case GameState.IDLE:
-        return 'bg-purple-500 hover:bg-purple-600';
-      case GameState.WAITING:
-        return 'bg-red-500';
-      case GameState.READY:
-        return 'bg-green-500';
-      case GameState.PENDING:
-        return 'bg-green-500'; // Keep green during pending state
-      case GameState.FINISHED:
-        return 'bg-blue-500 hover:bg-blue-600';
-      case GameState.GAME_OVER:
-        return 'bg-red-600 hover:bg-red-700';
-      default:
-        return 'bg-purple-500';
+      case GameState.IDLE: return 'bg-purple-500 hover:bg-purple-600';
+      case GameState.WAITING: return 'bg-red-500';
+      case GameState.READY: return 'bg-green-500';
+      case GameState.PENDING: return 'bg-green-500';
+      case GameState.FINISHED: return 'bg-blue-500 hover:bg-blue-600';
+      case GameState.GAME_OVER: return 'bg-red-600 hover:bg-red-700';
+      default: return 'bg-purple-500';
     }
   };
 
-  // Determine message based on game state
   const getMessage = () => {
     switch (gameState) {
-      case GameState.IDLE:
-        return 'Click to Start';
-      case GameState.WAITING:
-        return 'Wait for green...';
-      case GameState.READY:
-        return 'Click Now!';
-      case GameState.PENDING:
-        return 'Processing Transaction...'; // Message during pending state
-      case GameState.FINISHED:
-        return 'Game Complete! Click to Play Again';
-      case GameState.GAME_OVER:
-        return 'Game Over! Clicked too early. Click to Try Again';
-      default:
-        return 'Click to Start';
+      case GameState.IDLE: return 'Click to Start';
+      case GameState.WAITING: return 'Wait for green...';
+      case GameState.READY: return 'Click Now!';
+      case GameState.PENDING: return 'Processing Transaction...';
+      case GameState.FINISHED: return 'Game Complete! Click to Play Again';
+      case GameState.GAME_OVER: return 'Game Over! Clicked too early. Click to Try Again';
+      default: return 'Click to Start';
     }
   };
 
-  // Calculate averages
   const avgReactionTime = results.length > 0 ? Math.round(totalReactionTime / results.length) : 0;
   const avgBlockchainTime = (results.length > 0 && isWeb3Enabled) ? Math.round(totalBlockchainTime / results.length) : 0;
   const avgTotalTime = avgReactionTime + avgBlockchainTime;
 
   return (
     <div className="flex flex-col items-center min-h-screen">
-      {/* Toast notification */}
       {showToast && (
         <div className="fixed top-24 right-6 z-50 bg-card border border-border p-4 rounded-lg shadow-lg animate-in fade-in slide-in-from-right-5">
           <div className="flex items-center gap-2">
@@ -310,7 +253,6 @@ export default function ReactionTimeGame() {
         </div>
       )}
 
-      {/* Back button positioned outside the main container */}
       <div className="fixed top-22 left-6 z-10">
         <Link
           href="/play"
@@ -327,8 +269,6 @@ export default function ReactionTimeGame() {
             <span className={isDark ? "text-white" : "text-black"}>REACTION</span>
             <span className="text-red-500 ml-2">TIME</span>
           </h1>
-
-          {/* Network Selector Component */}
           <div className="w-36 flex-shrink-0">
             <NetworkSelector
               isWeb3Enabled={isWeb3Enabled}
@@ -345,12 +285,10 @@ export default function ReactionTimeGame() {
           </p>
         </div>
 
-        {/* Game container */}
         <div
           className={cn(
             "w-full aspect-video rounded-lg flex flex-col items-center justify-center cursor-pointer shadow-lg text-center", 
             getContainerStyle(),
-            // Disable pointer events during pending state
             gameState === GameState.PENDING ? "cursor-wait pointer-events-none" : ""
           )}
           onClick={handleClick}
@@ -370,11 +308,9 @@ export default function ReactionTimeGame() {
           )}
         </div>
 
-        {/* Results - only show complete results when game is properly finished */}
         {gameState === GameState.FINISHED && results.length > 0 && (
           <div className="mt-8 p-6 border border-border rounded-lg">
             <h3 className="text-xl font-bold mb-4">Results</h3>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               {isWeb3Enabled ? (
                 <>
@@ -382,7 +318,6 @@ export default function ReactionTimeGame() {
                     <div className="text-lg font-medium mb-2">Average Time (with blockchain)</div>
                     <div className="text-3xl font-bold text-purple-500">{avgTotalTime} ms</div>
                   </div>
-
                   <div className="p-4 border border-border rounded-lg bg-card/40">
                     <div className="text-lg font-medium mb-2">Average Time (without blockchain)</div>
                     <div className="text-3xl font-bold text-green-500">{avgReactionTime} ms</div>

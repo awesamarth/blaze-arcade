@@ -2,31 +2,81 @@
 
 import Link from 'next/link'
 import { useTheme } from 'next-themes'
-import { Sun, Moon, Menu, X } from 'lucide-react'
+import { Sun, Moon, Menu, X, ChevronDown, ExternalLink } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import { useLogin, usePrivy, useWallets } from '@privy-io/react-auth'
+import { usePrivyWagmi } from '@privy-io/wagmi'
+import { useBalance } from 'wagmi'
+import { formatEther } from 'viem'
 
 export const Navbar = () => {
   const { theme, setTheme } = useTheme()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isWalletOpen, setIsWalletOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
-  
+
+  const { ready, authenticated, logout } = usePrivy()
+  const { login } = useLogin()
+  const { wallets } = useWallets()
+
+  const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy');
+
+
+  const disableLogin = !ready || (ready && authenticated)
+
+  // Get balance of active wallet
+  const { data: balanceData } = useBalance({
+    //@ts-ignore
+    address: embeddedWallet?.address
+  })
+
   // Wait for component to mount to access theme
   useEffect(() => {
     setMounted(true)
   }, [])
-  
+
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen)
+  const toggleWalletDropdown = () => setIsWalletOpen(!isWalletOpen)
   const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark')
-  
+
   // Used for conditional rendering based on theme
   const isDark = mounted && theme === 'dark'
+
+  // Helper function to truncate address
+  const truncateAddress = (address: any) => {
+    if (!address) return '';
+    return `${address.substring(0, 8)}...${address.substring(address.length - 4)}`;
+  }
+
+  // Get faucet URL based on chain ID
+  const getFaucetUrl = (chainId: string | null | number) => {
+    switch (chainId) {
+      case 31337: // Foundry
+        return 'https://chain.link/faucets';
+      case 6342: // Mega Testnet
+        return 'https://mega.faucet.testnet.xyz';
+      case 11370: // Somnia Testnet
+        return 'https://faucet.somnia.testnet.xyz';
+      case 11155931: // RISE Testnet
+        return 'https://faucet.riselabs.xyz';
+      default:
+        return '';
+    }
+  }
+
+  // Get current chain ID from active wallet
+  const currentChainId = embeddedWallet?.chainId || null;
+  console.log(currentChainId)
+
+  // Get faucet URL for current chain
+  const faucetUrl = getFaucetUrl(currentChainId);
 
   return (
     <nav className={cn(
       "w-full fixed top-0 z-[9999] py-4 px-6 md:px-12 flex items-center justify-between border-b transition-colors duration-300",
-      isDark 
-        ? "bg-black border-white/10" 
+      isDark
+        ? "bg-black border-white/10"
         : "bg-white border-black/10"
     )}>
       {/* Logo/Brand */}
@@ -38,9 +88,9 @@ export const Navbar = () => {
           BLAZE
         </span>
       </Link>
-      
+
       {/* Mobile Menu Button */}
-      <button 
+      <button
         className={cn(
           "md:hidden flex items-center",
           isDark ? "text-white" : "text-black"
@@ -50,59 +100,148 @@ export const Navbar = () => {
       >
         {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
-      
+
       {/* Nav Items & Controls */}
       <div className={cn(
         "flex flex-col md:flex-row items-center gap-6 md:gap-8 absolute md:static top-16 left-0 right-0 md:bg-transparent p-6 md:p-0 border-b md:border-0 transition-all duration-300 z-10",
-        isDark 
-          ? "bg-black border-white/10" 
+        isDark
+          ? "bg-black border-white/10"
           : "bg-white border-black/10",
         isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible md:opacity-100 md:visible"
       )}>
-        <Link 
-          href="/play" 
+        <Link
+          href="/play"
           className={cn(
             "transition-colors",
-            isDark 
-              ? "text-white hover:text-purple-400" 
+            isDark
+              ? "text-white hover:text-purple-400"
               : "text-black hover:text-purple-700"
           )}
         >
           Games
         </Link>
-        <Link 
-          href="/leaderboard" 
+        <Link
+          href="/leaderboard"
           className={cn(
             "transition-colors",
-            isDark 
-              ? "text-white hover:text-purple-400" 
+            isDark
+              ? "text-white hover:text-purple-400"
               : "text-black hover:text-purple-700"
           )}
         >
           Leaderboard
         </Link>
-        <Link 
-          href="/about" 
+        <Link
+          href="/about"
           className={cn(
             "transition-colors",
-            isDark 
-              ? "text-white hover:text-purple-400" 
+            isDark
+              ? "text-white hover:text-purple-400"
               : "text-black hover:text-purple-700"
           )}
         >
           About
         </Link>
-        
-        {/* Wallet Connect Button */}
-        <w3m-button />
-        
+
+        {/* Wallet Connection */}
+        {!authenticated ? (
+          <button
+            disabled={disableLogin}
+            onClick={login}
+            className={cn(
+              "px-4 py-2 rounded-md transition-colors",
+              isDark
+                ? "bg-gray-800 hover:bg-gray-700 text-white"
+                : "bg-gray-200 hover:bg-gray-300 text-black",
+              disableLogin && "opacity-50 cursor-not-allowed"
+            )}
+          >
+            Login
+          </button>
+        ) : (
+          <div className="relative">
+            <button
+              onClick={toggleWalletDropdown}
+              className={cn(
+                "px-4 py-2 rounded-md transition-colors flex items-center gap-2 hover:cursor-pointer",
+                isDark
+                  ? "bg-gray-800 hover:bg-gray-700 text-white"
+                  : "bg-gray-200 hover:bg-gray-300 text-black"
+              )}
+            >
+              <span>{truncateAddress(embeddedWallet?.address)}</span>
+              <ChevronDown size={16} />
+            </button>
+
+            {isWalletOpen && (
+              <div className={cn(
+                "absolute right-0 mt-2 w-56 rounded-md shadow-lg p-2 border z-20",
+                isDark
+                  ? "bg-gray-800 border-gray-700"
+                  : "bg-white border-gray-200"
+              )}>
+                {/* Connected address */}
+                <div className="">
+                  <div className={cn(
+                    "flex items-center w-full px-3 py-2 text-sm rounded-md")}>
+                    {truncateAddress(embeddedWallet?.address)}
+                  </div>
+                </div>
+
+                {/* Balance display */}
+                <div className="mb-2">
+                  <div className={cn(
+                    "flex items-center w-full px-3 py-2 text-sm rounded-md"
+                  )}>
+                    {balanceData ? `${parseFloat(formatEther(balanceData.value)).toFixed(6)} ETH` : '0.000000 ETH'}
+                  </div>
+                </div>
+
+                {/* Faucet link */}
+                {faucetUrl && (
+                  <a
+                    href={faucetUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      "flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md hover:cursor-pointer",
+                      isDark
+                        ? "hover:bg-gray-700 text-white"
+                        : "hover:bg-gray-100 text-gray-700"
+                    )}
+                  >
+                    Get testnet ETH
+                    <ExternalLink size={14} />
+                  </a>
+                )}
+
+                {/* Disconnect button */}
+                <button
+                  onClick={() => {
+                    logout();
+                    setIsWalletOpen(false);
+                  }}
+                  className={cn(
+                    "flex items-center w-full px-3 py-2 text-sm rounded-md hover:cursor-pointer",
+                    isDark
+                      ? "bg-red-600 hover:bg-red-700 text-white"
+                      : "bg-red-700 hover:bg-red-800 text-white"
+                  )}
+                >
+                  Disconnect
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Theme Toggle */}
-        <button 
-          onClick={toggleTheme} 
+        <button
+          onClick={toggleTheme}
           className={cn(
             "p-2 rounded-md hover:cursor-pointer transition-colors",
-            isDark 
-              ? "bg-gray-800 hover:bg-gray-700 text-white" 
+            isDark
+              ? "bg-gray-800 hover:bg-gray-700 text-white"
               : "bg-gray-200 hover:bg-gray-300 text-black"
           )}
           aria-label="Toggle Theme"
@@ -110,7 +249,7 @@ export const Navbar = () => {
           {mounted && (isDark ? <Sun size={20} /> : <Moon size={20} />)}
         </button>
       </div>
-    </nav>
+    </nav >
   )
 }
 
