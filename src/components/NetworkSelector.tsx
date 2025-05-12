@@ -16,7 +16,8 @@ export interface Network {
 export const NETWORKS: Network[] = [
   { id: 'megaeth', name: 'MegaETH', color: 'purple' },
   { id: 'rise', name: 'RISE', color: 'blue' },
-  { id: 'somnia', name: 'Somnia', color: 'orange' }
+  { id: 'somnia', name: 'Somnia', color: 'orange' },
+  { id: 'foundry', name: 'Foundry', color: 'green' }  // Add this line
 ]
 
 interface NetworkSelectorProps {
@@ -35,8 +36,11 @@ export function NetworkSelector({
   const { resolvedTheme } = useTheme()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  const [isMounted, setIsMounted] = useState(false)
+
   
-  const isDark = resolvedTheme === 'dark'
+  const isDark = isMounted && resolvedTheme === 'dark'
 
   // Get network color class
   const getNetworkColorClass = (networkId: string): string => {
@@ -83,6 +87,10 @@ export function NetworkSelector({
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [dropdownRef])
+
+     useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   return (
     <div className="flex flex-col w-full">
@@ -132,7 +140,9 @@ export function NetworkSelector({
                   "w-3 h-3 rounded-full flex-shrink-0",
                   selectedNetwork.id === 'megaeth' && "bg-purple-500",
                   selectedNetwork.id === 'rise' && "bg-blue-500",
-                  selectedNetwork.id === 'somnia' && "bg-orange-500"
+                  selectedNetwork.id === 'somnia' && "bg-orange-500",
+                  selectedNetwork.id === 'foundry' && "bg-green-500"  
+
                 )}
               />
               <span className="whitespace-nowrap">{selectedNetwork.name}</span>
@@ -165,7 +175,9 @@ export function NetworkSelector({
                       "w-3 h-3 rounded-full",
                       network.id === 'megaeth' && "bg-purple-500",
                       network.id === 'rise' && "bg-blue-500",
-                      network.id === 'somnia' && "bg-orange-500"
+                      network.id === 'somnia' && "bg-orange-500",
+                      network.id === 'foundry' && "bg-green-500" 
+
                     )}
                   />
                   <span className={getNetworkColorClass(network.id)}>{network.name} </span>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useTheme } from 'next-themes'
-import { Sun, Moon, Menu, X, ChevronDown, ExternalLink } from 'lucide-react'
+import { Sun, Moon, Menu, X, ChevronDown, ExternalLink, Copy } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { useLogin, usePrivy, useWallets } from '@privy-io/react-auth'
@@ -15,6 +15,7 @@ export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isWalletOpen, setIsWalletOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const { ready, authenticated, logout } = usePrivy()
   const { login } = useLogin()
@@ -41,7 +42,7 @@ export const Navbar = () => {
   const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark')
 
   // Used for conditional rendering based on theme
-  const isDark = mounted && theme === 'dark'
+  const isLight = mounted && theme === 'light'
 
   // Helper function to truncate address
   const truncateAddress = (address: any) => {
@@ -75,15 +76,15 @@ export const Navbar = () => {
   return (
     <nav className={cn(
       "w-full fixed top-0 z-[9999] py-4 px-6 md:px-12 flex items-center justify-between border-b transition-colors duration-300",
-      isDark
-        ? "bg-black border-white/10"
-        : "bg-white border-black/10"
+      isLight
+        ? "bg-white border-black/10"
+        : "bg-black border-white/10"
     )}>
       {/* Logo/Brand */}
       <Link href="/" className="flex items-center">
         <span className={cn(
           "text-2xl font-bold font-[family-name:var(--font-doom)]",
-          isDark ? "text-white" : "text-black"
+          isLight ? "text-black" : "text-white"
         )}>
           BLAZE
         </span>
@@ -93,7 +94,7 @@ export const Navbar = () => {
       <button
         className={cn(
           "md:hidden flex items-center",
-          isDark ? "text-white" : "text-black"
+          isLight ? "text-black" : "text-white"
         )}
         onClick={toggleMenu}
         aria-label="Toggle Menu"
@@ -104,18 +105,21 @@ export const Navbar = () => {
       {/* Nav Items & Controls */}
       <div className={cn(
         "flex flex-col md:flex-row items-center gap-6 md:gap-8 absolute md:static top-16 left-0 right-0 md:bg-transparent p-6 md:p-0 border-b md:border-0 transition-all duration-300 z-10",
-        isDark
-          ? "bg-black border-white/10"
-          : "bg-white border-black/10",
+        isLight
+
+          ? "bg-white border-black/10"
+
+          : "bg-black border-white/10",
+
         isMenuOpen ? "opacity-100 visible" : "opacity-0 invisible md:opacity-100 md:visible"
       )}>
         <Link
           href="/play"
           className={cn(
             "transition-colors",
-            isDark
-              ? "text-white hover:text-purple-400"
-              : "text-black hover:text-purple-700"
+            isLight
+              ? "text-black hover:text-purple-700"
+              : "text-white hover:text-purple-400"
           )}
         >
           Games
@@ -124,9 +128,9 @@ export const Navbar = () => {
           href="/leaderboard"
           className={cn(
             "transition-colors",
-            isDark
-              ? "text-white hover:text-purple-400"
-              : "text-black hover:text-purple-700"
+            isLight
+              ? "text-black hover:text-purple-700"
+              : "text-white hover:text-purple-400"
           )}
         >
           Leaderboard
@@ -135,9 +139,9 @@ export const Navbar = () => {
           href="/about"
           className={cn(
             "transition-colors",
-            isDark
-              ? "text-white hover:text-purple-400"
-              : "text-black hover:text-purple-700"
+            isLight
+              ? "text-black hover:text-purple-700"
+              : "text-white hover:text-purple-400"
           )}
         >
           About
@@ -150,9 +154,9 @@ export const Navbar = () => {
             onClick={login}
             className={cn(
               "px-4 py-2 rounded-md transition-colors",
-              isDark
-                ? "bg-gray-800 hover:bg-gray-700 text-white"
-                : "bg-gray-200 hover:bg-gray-300 text-black",
+              isLight
+                ? "bg-gray-200 hover:bg-gray-300 text-black"
+                : "bg-gray-800 hover:bg-gray-700 text-white",
               disableLogin && "opacity-50 cursor-not-allowed"
             )}
           >
@@ -164,9 +168,9 @@ export const Navbar = () => {
               onClick={toggleWalletDropdown}
               className={cn(
                 "px-4 py-2 rounded-md transition-colors flex items-center gap-2 hover:cursor-pointer",
-                isDark
-                  ? "bg-gray-800 hover:bg-gray-700 text-white"
-                  : "bg-gray-200 hover:bg-gray-300 text-black"
+                isLight
+                  ? "bg-gray-200 hover:bg-gray-300 text-black"
+                  : "bg-gray-800 hover:bg-gray-700 text-white"
               )}
             >
               <span>{truncateAddress(embeddedWallet?.address)}</span>
@@ -176,15 +180,33 @@ export const Navbar = () => {
             {isWalletOpen && (
               <div className={cn(
                 "absolute right-0 mt-2 w-56 rounded-md shadow-lg p-2 border z-20",
-                isDark
-                  ? "bg-gray-800 border-gray-700"
-                  : "bg-white border-gray-200"
+                isLight
+                  ? "bg-white border-gray-200"
+                  : "bg-gray-800 border-gray-700"
               )}>
                 {/* Connected address */}
                 <div className="">
                   <div className={cn(
-                    "flex items-center w-full px-3 py-2 text-sm rounded-md")}>
-                    {truncateAddress(embeddedWallet?.address)}
+                    "flex items-center justify-between w-full px-3 py-2 text-sm rounded-md"
+                  )}>
+                    <span>{truncateAddress(embeddedWallet?.address)}</span>
+                    <div className="relative group">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(embeddedWallet?.address || '');
+                          // Trigger copied state (you'll need to add this state)
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                        className="ml-2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                      >
+                        <Copy className='hover:cursor-pointer' size={14} />
+                      </button>
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-black rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap">
+                        {copied ? 'Copied!' : 'Copy address'}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -205,9 +227,9 @@ export const Navbar = () => {
                     rel="noopener noreferrer"
                     className={cn(
                       "flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md hover:cursor-pointer",
-                      isDark
-                        ? "hover:bg-gray-700 text-white"
-                        : "hover:bg-gray-100 text-gray-700"
+                      isLight
+                        ? "hover:bg-gray-100 text-gray-700"
+                        : "hover:bg-gray-700 text-white"
                     )}
                   >
                     Get testnet ETH
@@ -223,9 +245,9 @@ export const Navbar = () => {
                   }}
                   className={cn(
                     "flex items-center w-full px-3 py-2 text-sm rounded-md hover:cursor-pointer",
-                    isDark
-                      ? "bg-red-600 hover:bg-red-700 text-white"
-                      : "bg-red-700 hover:bg-red-800 text-white"
+                    isLight
+                      ? "bg-red-700 hover:bg-red-800 text-white"
+                      : "bg-red-600 hover:bg-red-700 text-white"
                   )}
                 >
                   Disconnect
@@ -240,13 +262,13 @@ export const Navbar = () => {
           onClick={toggleTheme}
           className={cn(
             "p-2 rounded-md hover:cursor-pointer transition-colors",
-            isDark
-              ? "bg-gray-800 hover:bg-gray-700 text-white"
-              : "bg-gray-200 hover:bg-gray-300 text-black"
+            isLight
+              ? "bg-gray-200 hover:bg-gray-300 text-black"
+              : "bg-gray-800 hover:bg-gray-700 text-white"
           )}
           aria-label="Toggle Theme"
         >
-          {mounted && (isDark ? <Sun size={20} /> : <Moon size={20} />)}
+          {mounted && (isLight ? <Moon size={20} /> : <Sun size={20} />)}
         </button>
       </div>
     </nav >

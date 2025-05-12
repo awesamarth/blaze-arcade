@@ -6,7 +6,9 @@ import { ArrowLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { NetworkSelector, NETWORKS, Network } from '@/components/NetworkSelector'
-import { socket } from '@/app/socket'
+import { useBlockchainUtils } from '@/hooks/useBlockchainUtils'
+import { getEmbeddedConnectedWallet, useWallets } from '@privy-io/react-auth'
+import { callFaucet } from '@/utils'
 
 enum GameState {
   IDLE = 'idle',
@@ -14,11 +16,14 @@ enum GameState {
   READY = 'ready',
   PENDING = 'pending',
   FINISHED = 'finished',
-  GAME_OVER = 'game_over'
+  GAME_OVER = 'game_over',
+  TRANSACTION_FAILED = 'transaction_failed'  // New state
+
 }
 
 export default function ReactionTimeGame() {
   const { resolvedTheme } = useTheme()
+  const { initData, sendUpdate, getPoolStatus, checkBalance } = useBlockchainUtils()
 
   const [gameState, setGameState] = useState<GameState>(GameState.IDLE)
   const [attempts, setAttempts] = useState<number>(0)
@@ -26,78 +31,55 @@ export default function ReactionTimeGame() {
   const [totalReactionTime, setTotalReactionTime] = useState<number>(0)
   const [totalBlockchainTime, setTotalBlockchainTime] = useState<number>(0)
   const [isWeb3Enabled, setIsWeb3Enabled] = useState<boolean>(true)
-  const [selectedNetwork, setSelectedNetwork] = useState<Network>(NETWORKS[0])
+  const [selectedNetwork, setSelectedNetwork] = useState<Network>(NETWORKS[3])
   const [showToast, setShowToast] = useState(false)
-  const [pendingAttempt, setPendingAttempt] = useState(0)
   const [txStartTime, setTxStartTime] = useState(0)
+  const [isInitializing, setIsInitializing] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const readyTimeRef = useRef<number>(0)
   const frameRequestRef = useRef<number | null>(null)
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isDark = isMounted && resolvedTheme === 'dark'
+  const { wallets } = useWallets()
+  const embeddedWallet = getEmbeddedConnectedWallet(wallets)
+  // Initialize pre-signed transactions when web3 is enabled or network changes
 
-  const isDark = resolvedTheme === 'dark'
+useEffect(() => {
+  const initializeNetwork = async () => {
+    if (isWeb3Enabled && selectedNetwork && embeddedWallet?.address) {
+      setIsInitializing(true)
+      try {
+        // Check balance first
+        const balance = await checkBalance(selectedNetwork.id)
+        
+        // If balance is 0, call faucet
+        if (balance === 0n) {
+          console.log(`Balance is 0 on ${selectedNetwork.name}, calling faucet...`)
+          await callFaucet(embeddedWallet.address, selectedNetwork.id)
+          // Optional: Wait a bit for tokens to arrive before initializing
+          await new Promise(resolve => setTimeout(resolve, 2000))
+        }
+        
+        console.log("trying now with: ", selectedNetwork.id)
+        await initData(selectedNetwork.id, 30) // Pre-sign 30 transactions
+        console.log(`Initialized ${selectedNetwork.name} with pre-signed transactions`)
+      } catch (error) {
+        console.error(`Failed to initialize ${selectedNetwork.name}:`, error)
+      } finally {
+        setIsInitializing(false)
+      }
+    }
+  }
+
+  initializeNetwork()
+}, [selectedNetwork, embeddedWallet?.address]) // Add embeddedWallet.address to deps
 
   useEffect(() => {
-    socket.on('update_complete', (data) => {
-      if (gameState === GameState.PENDING) {
-        const blockchainTime = Math.round(performance.now() - txStartTime);
-        const reactionTime = results[pendingAttempt - 1]?.reactionTime || 0;
+    setIsMounted(true)
+  }, [])
 
-        const newResults = [...results];
-        newResults[pendingAttempt - 1] = { reactionTime, blockchainTime };
-        setResults(newResults);
-
-        setTotalBlockchainTime(prev =>
-          prev - (results[pendingAttempt - 1]?.blockchainTime || 0) + blockchainTime
-        );
-
-        setShowToast(false);
-
-        if (pendingAttempt < 5) {
-          setGameState(GameState.WAITING);
-
-          const delay = Math.floor(Math.random() * 4000) + 1000;
-          clearAllTimers();
-
-          const start = performance.now();
-          const checkTime = (now: number) => {
-            if (now - start >= delay) {
-              setGameState(GameState.READY);
-              readyTimeRef.current = now;
-            } else {
-              frameRequestRef.current = requestAnimationFrame(checkTime);
-            }
-          };
-          frameRequestRef.current = requestAnimationFrame(checkTime);
-        } else {
-          setGameState(GameState.FINISHED);
-        }
-      }
-    });
-
-    return () => {
-      socket.off('game_data');
-      socket.off('game_ending');
-      socket.off('game_ended');
-      socket.off('update_complete');
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-    };
-  }, [gameState, pendingAttempt, results]);
-
-  const sendTransaction = async () => {
-    setTxStartTime(performance.now());
-    setGameState(GameState.PENDING);
-    setShowToast(true);
-
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-
-    socket.emit("update", { chain: selectedNetwork.id });
-  };
 
   const clearAllTimers = useCallback(() => {
     if (timeoutRef.current) {
@@ -115,7 +97,7 @@ export default function ReactionTimeGame() {
   }, []);
 
   const startGame = useCallback(() => {
-    if (![GameState.IDLE, GameState.FINISHED, GameState.GAME_OVER].includes(gameState)) return;
+    if (![GameState.IDLE, GameState.FINISHED, GameState.GAME_OVER, GameState.TRANSACTION_FAILED].includes(gameState)) return;
 
     clearAllTimers();
 
@@ -124,7 +106,6 @@ export default function ReactionTimeGame() {
     setResults([]);
     setTotalReactionTime(0);
     setTotalBlockchainTime(0);
-    setPendingAttempt(0);
     setShowToast(false);
 
     const delay = Math.floor(Math.random() * 4000) + 1000;
@@ -146,10 +127,14 @@ export default function ReactionTimeGame() {
   }, [clearAllTimers]);
 
   const handleClick = useCallback(async () => {
+    if (isInitializing) return;
+
     switch (gameState) {
       case GameState.IDLE:
       case GameState.FINISHED:
       case GameState.GAME_OVER:
+      case GameState.TRANSACTION_FAILED:  // Add this case
+
         startGame();
         break;
 
@@ -165,18 +150,64 @@ export default function ReactionTimeGame() {
         const now = performance.now();
         const reactionTime = Math.round(now - readyTimeRef.current);
 
-        const currentAttempt = attempts + 1;
-        setPendingAttempt(currentAttempt);
-
         if (isWeb3Enabled) {
-          const newResults = [...results, { reactionTime, blockchainTime: 0 }];
-          setResults(newResults);
-          setTotalReactionTime(prev => prev + reactionTime);
-          setAttempts(prev => prev + 1);
-          await sendTransaction();
+          setTxStartTime(performance.now());
+          setGameState(GameState.PENDING);
+          setShowToast(true);
+
+          if (toastTimeoutRef.current) {
+            clearTimeout(toastTimeoutRef.current);
+          }
+
+          try {
+            // Send transaction and measure blockchain time
+            const blockchainTime = await sendUpdate(selectedNetwork.id);
+
+            // Transaction complete - update results
+            const newResult = {
+              reactionTime,
+              blockchainTime: Math.round(blockchainTime)
+            };
+            setResults(prev => [...prev, newResult]);
+            setTotalReactionTime(prev => prev + reactionTime);
+            setTotalBlockchainTime(prev => prev + Math.round(blockchainTime));
+            setAttempts(prev => prev + 1);
+
+            setShowToast(false);
+
+            // Check if game is complete
+            if (attempts + 1 < 5) {
+              setGameState(GameState.WAITING);
+
+              const delay = Math.floor(Math.random() * 4000) + 1000;
+              clearAllTimers();
+
+              const start = performance.now();
+              const checkTime = (now: number) => {
+                if (now - start >= delay) {
+                  setGameState(GameState.READY);
+                  readyTimeRef.current = now;
+                } else {
+                  frameRequestRef.current = requestAnimationFrame(checkTime);
+                }
+              };
+              frameRequestRef.current = requestAnimationFrame(checkTime);
+            } else {
+              setGameState(GameState.FINISHED);
+            }
+
+          } catch (error) {
+            console.error('Transaction failed:', error);
+            setShowToast(false);
+            setGameState(GameState.TRANSACTION_FAILED);
+
+            // Show error message or handle failure gracefully
+            // Could add a specific error state if needed
+          }
         } else {
-          const newResults = [...results, { reactionTime, blockchainTime: 0 }];
-          setResults(newResults);
+          // Web3 disabled - just record reaction time
+          const newResult = { reactionTime, blockchainTime: 0 };
+          setResults(prev => [...prev, newResult]);
           setTotalReactionTime(prev => prev + reactionTime);
 
           if (attempts < 4) {
@@ -202,14 +233,14 @@ export default function ReactionTimeGame() {
         }
         break;
     }
-  }, [gameState, results, attempts, startGame, isWeb3Enabled, selectedNetwork.id, clearAllTimers]);
+  }, [gameState, attempts, startGame, isWeb3Enabled, selectedNetwork.id, clearAllTimers, sendUpdate]);
 
-  const handleToggleWeb3 = (enabled: boolean) => {
+  const handleToggleWeb3 = async (enabled: boolean) => {
     if (gameState === GameState.PENDING) return;
     setIsWeb3Enabled(enabled);
   };
 
-  const handleNetworkSelect = (network: Network) => {
+  const handleNetworkSelect = async (network: Network) => {
     if (gameState === GameState.PENDING) return;
     setSelectedNetwork(network);
   };
@@ -222,6 +253,7 @@ export default function ReactionTimeGame() {
       case GameState.PENDING: return 'bg-green-500';
       case GameState.FINISHED: return 'bg-blue-500 hover:bg-blue-600';
       case GameState.GAME_OVER: return 'bg-red-600 hover:bg-red-700';
+      case GameState.TRANSACTION_FAILED: return 'bg-red-600 hover:bg-red-700';  // Same styling as GAME_OVER
       default: return 'bg-purple-500';
     }
   };
@@ -234,6 +266,7 @@ export default function ReactionTimeGame() {
       case GameState.PENDING: return 'Processing Transaction...';
       case GameState.FINISHED: return 'Game Complete! Click to Play Again';
       case GameState.GAME_OVER: return 'Game Over! Clicked too early. Click to Try Again';
+      case GameState.TRANSACTION_FAILED: return 'Transaction Failed! Click to Try Again';  // New message
       default: return 'Click to Start';
     }
   };
@@ -242,6 +275,9 @@ export default function ReactionTimeGame() {
   const avgBlockchainTime = (results.length > 0 && isWeb3Enabled) ? Math.round(totalBlockchainTime / results.length) : 0;
   const avgTotalTime = avgReactionTime + avgBlockchainTime;
 
+  // Check pool status for debugging
+  const poolStatus = getPoolStatus(selectedNetwork.id);
+
   return (
     <div className="flex flex-col items-center min-h-screen">
       {showToast && (
@@ -249,6 +285,20 @@ export default function ReactionTimeGame() {
           <div className="flex items-center gap-2">
             <Loader2 className="animate-spin text-primary" size={18} />
             <span>Transaction pending on {selectedNetwork.name}...</span>
+          </div>
+          {poolStatus && (
+            <div className="text-xs text-muted-foreground mt-1">
+              Transactions remaining: {poolStatus.available}
+            </div>
+          )}
+        </div>
+      )}
+
+      {isInitializing && (
+        <div className="fixed top-24 left-6 z-50 bg-card border border-border p-4 rounded-lg shadow-lg">
+          <div className="flex items-center gap-2">
+            <Loader2 className="animate-spin text-primary" size={18} />
+            <span>Initializing {selectedNetwork.name}...</span>
           </div>
         </div>
       )}
@@ -287,9 +337,9 @@ export default function ReactionTimeGame() {
 
         <div
           className={cn(
-            "w-full aspect-video rounded-lg flex flex-col items-center justify-center cursor-pointer shadow-lg text-center", 
+            "w-full select-none aspect-video rounded-lg flex flex-col items-center justify-center cursor-pointer shadow-lg text-center",
             getContainerStyle(),
-            gameState === GameState.PENDING ? "cursor-wait pointer-events-none" : ""
+            gameState === GameState.PENDING || isInitializing ? "cursor-wait pointer-events-none" : ""
           )}
           onClick={handleClick}
         >
@@ -334,11 +384,11 @@ export default function ReactionTimeGame() {
             {isWeb3Enabled && (
               <div className="border-t border-border pt-4">
                 <h4 className="font-medium mb-2">
-                  {`${selectedNetwork.name} L2 Transaction Overhead: ${avgBlockchainTime} ms`}
+                  {`${selectedNetwork.name} Testnet Transaction Overhead: ${avgBlockchainTime} ms`}
                 </h4>
                 <p className="text-muted-foreground text-sm">
                   This is how much time the blockchain adds to each reaction.
-                  Different L2 networks will have different processing speeds.
+                  Look how much it holds you back
                 </p>
               </div>
             )}
