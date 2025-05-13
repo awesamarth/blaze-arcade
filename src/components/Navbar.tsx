@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useTheme } from 'next-themes'
 import { Sun, Moon, Menu, X, ChevronDown, ExternalLink, Copy } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { useLogin, usePrivy, useWallets } from '@privy-io/react-auth'
 import { usePrivyWagmi } from '@privy-io/wagmi'
@@ -20,22 +20,38 @@ export const Navbar = () => {
   const { ready, authenticated, logout } = usePrivy()
   const { login } = useLogin()
   const { wallets } = useWallets()
+  const walletDropdownRef = useRef<HTMLDivElement>(null);
+
 
   const embeddedWallet = wallets.find(wallet => wallet.walletClientType === 'privy');
 
 
   const disableLogin = !ready || (ready && authenticated)
 
-  // Get balance of active wallet
-  const { data: balanceData } = useBalance({
-    //@ts-ignore
-    address: embeddedWallet?.address
-  })
+
+
+
 
   // Wait for component to mount to access theme
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (walletDropdownRef.current && !walletDropdownRef.current.contains(event.target as Node)) {
+        setIsWalletOpen(false);
+      }
+    };
+
+    if (isWalletOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isWalletOpen]);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen)
   const toggleWalletDropdown = () => setIsWalletOpen(!isWalletOpen)
@@ -57,7 +73,7 @@ export const Navbar = () => {
         return 'https://chain.link/faucets';
       case 6342: // Mega Testnet
         return 'https://mega.faucet.testnet.xyz';
-      case 11370: // Somnia Testnet
+      case 50312: // Somnia Testnet
         return 'https://faucet.somnia.testnet.xyz';
       case 11155931: // RISE Testnet
         return 'https://faucet.riselabs.xyz';
@@ -69,9 +85,21 @@ export const Navbar = () => {
   // Get current chain ID from active wallet
   const currentChainId = embeddedWallet?.chainId || null;
   console.log(currentChainId)
+  const parsedChainId = currentChainId ? parseInt(currentChainId.split(':')[1]) : null;
+
+  // Get balance of active wallet
+  const { data: balanceData } = useBalance({
+    //@ts-ignore
+    address: embeddedWallet?.address,
+    chainId: parsedChainId || undefined, // Add this line
+
+  })
+
 
   // Get faucet URL for current chain
-  const faucetUrl = getFaucetUrl(currentChainId);
+  const faucetUrl = getFaucetUrl(parsedChainId);
+
+
 
   return (
     <nav className={cn(
@@ -153,7 +181,7 @@ export const Navbar = () => {
             disabled={disableLogin}
             onClick={login}
             className={cn(
-              "px-4 py-2 rounded-md transition-colors",
+              "px-4 py-2 rounded-md transition-colors hover:cursor-pointer",
               isLight
                 ? "bg-gray-200 hover:bg-gray-300 text-black"
                 : "bg-gray-800 hover:bg-gray-700 text-white",
@@ -163,7 +191,7 @@ export const Navbar = () => {
             Login
           </button>
         ) : (
-          <div className="relative">
+          <div className="relative" ref={walletDropdownRef}>
             <button
               onClick={toggleWalletDropdown}
               className={cn(
@@ -211,7 +239,7 @@ export const Navbar = () => {
                 </div>
 
                 {/* Balance display */}
-                <div className="mb-2">
+                <div className="">
                   <div className={cn(
                     "flex items-center w-full px-3 py-2 text-sm rounded-md"
                   )}>
@@ -226,7 +254,7 @@ export const Navbar = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     className={cn(
-                      "flex items-center gap-2 w-full px-3 py-2 text-sm rounded-md hover:cursor-pointer",
+                      "flex items-center mb-2 gap-2 w-full px-3 py-2 text-sm rounded-md hover:cursor-pointer",
                       isLight
                         ? "hover:bg-gray-100 text-gray-700"
                         : "hover:bg-gray-700 text-white"

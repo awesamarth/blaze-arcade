@@ -1,6 +1,6 @@
 // src/hooks/useBlockchainUtils.ts
 import { useWallets } from "@privy-io/react-auth";
-import { createWalletClient, custom, encodeFunctionData, Hex, publicActions } from "viem";
+import { createWalletClient, custom, encodeFunctionData, Hex, http, publicActions, webSocket } from "viem";
 import { foundry, megaethTestnet, somniaTestnet } from "viem/chains";
 import { riseTestnet } from "@/wagmi-config";
 import { UPDATER_ABI, LOCAL_UPDATER_ADDRESS, MEGA_UPDATER_ADDRESS, RISE_UPDATER_ADDRESS, SOMNIA_UPDATER_ADDRESS } from '@/constants';
@@ -10,24 +10,29 @@ const CHAIN_CONFIGS = {
   megaeth: { 
     chain: megaethTestnet, 
     contractAddress: MEGA_UPDATER_ADDRESS,
-    chainId: 6342
+    chainId: 6342,
+    transport: () => http('https://carrot.megaeth.com/rpc') // Custom HTTP RPC
   },
   rise: { 
     chain: riseTestnet, 
     contractAddress: RISE_UPDATER_ADDRESS,
-    chainId: 11155931
+    chainId: 11155931,
+    transport: () => webSocket('wss://testnet.riselabs.xyz/ws') // WebSocket for Rise
   },
   somnia: { 
     chain: somniaTestnet, 
     contractAddress: SOMNIA_UPDATER_ADDRESS,
-    chainId: 11370
+    chainId: 50312,
+    transport: () => http('https://dream-rpc.somnia.network') // Custom HTTP for Somnia
   },
   foundry: { 
     chain: foundry, 
     contractAddress: LOCAL_UPDATER_ADDRESS,
-    chainId: 31337
+    chainId: 31337,
+    transport: () => webSocket('ws://127.0.0.1:8545') // Local Foundry
   }
 };
+
 
 // Pre-signed transaction pool
 let preSignedPool: Record<string, {
@@ -69,13 +74,21 @@ export function useBlockchainUtils() {
 
   const checkBalance = async (chainKey: string): Promise<bigint> => {
   if (!embeddedWallet) throw new Error('No embedded wallet found');
+
   
   // Use cached client if available, otherwise create one
   const client = clientCache[chainKey] || await createChainClient(chainKey);
+  console.log("client is here: ")
+  console.log(client)
+  console.log("checking balance of ", client.account.address)
+  console.log("on chain: ", chainKey)
   
   const balance = await client.getBalance({
     address: embeddedWallet.address as `0x${string}`
+    
   });
+
+  console.log("balance is here: ", balance)
   
   return balance;
 };

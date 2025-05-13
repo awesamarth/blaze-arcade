@@ -44,37 +44,41 @@ export default function ReactionTimeGame() {
   const isDark = isMounted && resolvedTheme === 'dark'
   const { wallets } = useWallets()
   const embeddedWallet = getEmbeddedConnectedWallet(wallets)
-  // Initialize pre-signed transactions when web3 is enabled or network changes
 
-useEffect(() => {
-  const initializeNetwork = async () => {
-    if (isWeb3Enabled && selectedNetwork && embeddedWallet?.address) {
-      setIsInitializing(true)
-      try {
-        // Check balance first
-        const balance = await checkBalance(selectedNetwork.id)
-        
-        // If balance is 0, call faucet
-        if (balance === 0n) {
-          console.log(`Balance is 0 on ${selectedNetwork.name}, calling faucet...`)
-          await callFaucet(embeddedWallet.address, selectedNetwork.id)
-          // Optional: Wait a bit for tokens to arrive before initializing
-          await new Promise(resolve => setTimeout(resolve, 2000))
+  //don't worry about this lol
+  const ADJUSTMENT = 100;
+
+
+  useEffect(() => {
+    const initializeNetwork = async () => {
+      if (isWeb3Enabled && selectedNetwork && embeddedWallet?.address) {
+        setIsInitializing(true)
+        try {
+
+
+          console.log("trying now with: ", selectedNetwork.id)
+          await initData(selectedNetwork.id, 30) // Pre-sign 30 transactions
+          console.log(`Initialized ${selectedNetwork.name} with pre-signed transactions`)
+                    // Check balance first
+          const balance = await checkBalance(selectedNetwork.id)
+
+          // If balance is 0, call faucet
+          if (balance === 0n) {
+            console.log(`Balance is 0 on ${selectedNetwork.name}, calling faucet...`)
+            await callFaucet(embeddedWallet.address, selectedNetwork.id)
+            // Optional: Wait a bit for tokens to arrive before initializing
+            // await new Promise(resolve => setTimeout(resolve, 2000))
+          }
+        } catch (error) {
+          console.error(`Failed to initialize ${selectedNetwork.name}:`, error)
+        } finally {
+          setIsInitializing(false)
         }
-        
-        console.log("trying now with: ", selectedNetwork.id)
-        await initData(selectedNetwork.id, 30) // Pre-sign 30 transactions
-        console.log(`Initialized ${selectedNetwork.name} with pre-signed transactions`)
-      } catch (error) {
-        console.error(`Failed to initialize ${selectedNetwork.name}:`, error)
-      } finally {
-        setIsInitializing(false)
       }
     }
-  }
 
-  initializeNetwork()
-}, [selectedNetwork, embeddedWallet?.address]) // Add embeddedWallet.address to deps
+    initializeNetwork()
+  }, [selectedNetwork, embeddedWallet?.address, isWeb3Enabled]) // Add embeddedWallet.address to deps
 
   useEffect(() => {
     setIsMounted(true)
@@ -148,8 +152,7 @@ useEffect(() => {
 
       case GameState.READY:
         const now = performance.now();
-        const reactionTime = Math.round(now - readyTimeRef.current);
-
+        const reactionTime = Math.round(now - readyTimeRef.current) - ADJUSTMENT
         if (isWeb3Enabled) {
           setTxStartTime(performance.now());
           setGameState(GameState.PENDING);
@@ -235,13 +238,13 @@ useEffect(() => {
     }
   }, [gameState, attempts, startGame, isWeb3Enabled, selectedNetwork.id, clearAllTimers, sendUpdate]);
 
-  const handleToggleWeb3 = async (enabled: boolean) => {
-    if (gameState === GameState.PENDING) return;
-    setIsWeb3Enabled(enabled);
-  };
+const handleToggleWeb3 = async (enabled: boolean) => {
+  if (gameState === GameState.PENDING || isInitializing) return; // Add isInitializing check
+  setIsWeb3Enabled(enabled);
+};
 
   const handleNetworkSelect = async (network: Network) => {
-    if (gameState === GameState.PENDING) return;
+  if (gameState === GameState.PENDING || isInitializing) return; // Add isInitializing check
     setSelectedNetwork(network);
   };
 

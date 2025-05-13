@@ -3,7 +3,7 @@ export const getChainId = (networkId: string): number => {
     case 'foundry': return 31337;
     case 'megaeth': return 6342;
     case 'rise': return 11155931;
-    case 'somnia': return 11370;
+    case 'somnia': return 50312;
     default: return 31337;
   }
 };
