@@ -57,7 +57,7 @@ export default function ReactionTimeGame() {
 
 
           console.log("trying now with: ", selectedNetwork.id)
-          await initData(selectedNetwork.id, 30) // Pre-sign 30 transactions
+await initData(selectedNetwork.id, 5) // Pre-sign only 5 transactions
           console.log(`Initialized ${selectedNetwork.name} with pre-signed transactions`)
                     // Check balance first
           const balance = await checkBalance(selectedNetwork.id)
