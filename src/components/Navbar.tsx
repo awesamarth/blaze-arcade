@@ -72,11 +72,11 @@ export const Navbar = () => {
       case 31337: // Foundry
         return 'https://chain.link/faucets';
       case 6342: // Mega Testnet
-        return 'https://mega.faucet.testnet.xyz';
+        return 'https://testnet.megaeth.com';
       case 50312: // Somnia Testnet
-        return 'https://faucet.somnia.testnet.xyz';
+        return 'https://testnet.somnia.network/';
       case 11155931: // RISE Testnet
-        return 'https://faucet.riselabs.xyz';
+        return 'https://faucet.testnet.riselabs.xyz/';
       default:
         return '';
     }
