@@ -57,9 +57,9 @@ export default function ReactionTimeGame() {
 
 
           console.log("trying now with: ", selectedNetwork.id)
-await initData(selectedNetwork.id, 5) // Pre-sign only 5 transactions
+          await initData(selectedNetwork.id, 10) // Pre-sign only 5 transactions
           console.log(`Initialized ${selectedNetwork.name} with pre-signed transactions`)
-                    // Check balance first
+          // Check balance first
           const balance = await checkBalance(selectedNetwork.id)
 
           // If balance is 0, call faucet
@@ -238,13 +238,13 @@ await initData(selectedNetwork.id, 5) // Pre-sign only 5 transactions
     }
   }, [gameState, attempts, startGame, isWeb3Enabled, selectedNetwork.id, clearAllTimers, sendUpdate]);
 
-const handleToggleWeb3 = async (enabled: boolean) => {
-  if (gameState === GameState.PENDING || isInitializing) return; // Add isInitializing check
-  setIsWeb3Enabled(enabled);
-};
+  const handleToggleWeb3 = async (enabled: boolean) => {
+    if (gameState === GameState.PENDING || isInitializing) return; // Add isInitializing check
+    setIsWeb3Enabled(enabled);
+  };
 
   const handleNetworkSelect = async (network: Network) => {
-  if (gameState === GameState.PENDING || isInitializing) return; // Add isInitializing check
+    if (gameState === GameState.PENDING || isInitializing) return; // Add isInitializing check
     setSelectedNetwork(network);
   };
 
