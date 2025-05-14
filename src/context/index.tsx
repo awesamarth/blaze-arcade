@@ -9,7 +9,6 @@ import { foundry, megaethTestnet, somniaTestnet } from 'viem/chains';
 
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  const { theme } = useTheme()
 
   const queryClient = new QueryClient();
 

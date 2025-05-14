@@ -31,7 +31,7 @@ export default function ReactionTimeGame() {
   const [totalReactionTime, setTotalReactionTime] = useState<number>(0)
   const [totalBlockchainTime, setTotalBlockchainTime] = useState<number>(0)
   const [isWeb3Enabled, setIsWeb3Enabled] = useState<boolean>(true)
-  const [selectedNetwork, setSelectedNetwork] = useState<Network>(NETWORKS[0])
+  const [selectedNetwork, setSelectedNetwork] = useState<Network>(NETWORKS[3])
   const [showToast, setShowToast] = useState(false)
   const [txStartTime, setTxStartTime] = useState(0)
   const [isInitializing, setIsInitializing] = useState(false)

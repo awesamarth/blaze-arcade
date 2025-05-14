@@ -6,7 +6,6 @@ import { Sun, Moon, Menu, X, ChevronDown, ExternalLink, Copy } from 'lucide-reac
 import { useState, useEffect, useRef } from 'react'
 import { cn } from '@/lib/utils'
 import { useLogin, usePrivy, useWallets } from '@privy-io/react-auth'
-import { usePrivyWagmi } from '@privy-io/wagmi'
 import { useBalance } from 'wagmi'
 import { formatEther } from 'viem'
 
