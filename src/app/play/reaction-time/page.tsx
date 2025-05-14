@@ -9,6 +9,7 @@ import { NetworkSelector, NETWORKS, Network } from '@/components/NetworkSelector
 import { useBlockchainUtils } from '@/hooks/useBlockchainUtils'
 import { getEmbeddedConnectedWallet, useWallets } from '@privy-io/react-auth'
 import { callFaucet } from '@/utils'
+import { LoginPrompt } from '@/components/LoginPrompt'
 
 enum GameState {
   IDLE = 'idle',
@@ -31,7 +32,7 @@ export default function ReactionTimeGame() {
   const [totalReactionTime, setTotalReactionTime] = useState<number>(0)
   const [totalBlockchainTime, setTotalBlockchainTime] = useState<number>(0)
   const [isWeb3Enabled, setIsWeb3Enabled] = useState<boolean>(true)
-  const [selectedNetwork, setSelectedNetwork] = useState<Network>(NETWORKS[3])
+  const [selectedNetwork, setSelectedNetwork] = useState<Network>(NETWORKS[0])
   const [showToast, setShowToast] = useState(false)
   const [txStartTime, setTxStartTime] = useState(0)
   const [isInitializing, setIsInitializing] = useState(false)
@@ -282,7 +283,13 @@ export default function ReactionTimeGame() {
   const poolStatus = getPoolStatus(selectedNetwork.id);
 
   return (
+
+
     <div className="flex flex-col items-center min-h-screen">
+         {!embeddedWallet ? (
+      <LoginPrompt />
+    ) :
+      (<>
       {showToast && (
         <div className="fixed top-24 right-6 z-50 bg-card border border-border p-4 rounded-lg shadow-lg animate-in fade-in slide-in-from-right-5">
           <div className="flex items-center gap-2">
@@ -422,6 +429,7 @@ export default function ReactionTimeGame() {
           </div>
         )}
       </div>
+      </>)}
     </div>
   );
 }
