@@ -32,7 +32,7 @@ export default function ReactionTimeGame() {
   const [totalReactionTime, setTotalReactionTime] = useState<number>(0)
   const [totalBlockchainTime, setTotalBlockchainTime] = useState<number>(0)
   const [isWeb3Enabled, setIsWeb3Enabled] = useState<boolean>(true)
-  const [selectedNetwork, setSelectedNetwork] = useState<Network>(NETWORKS[0])
+  const [selectedNetwork, setSelectedNetwork] = useState<Network>(NETWORKS[3])
   const [showToast, setShowToast] = useState(false)
   const [txStartTime, setTxStartTime] = useState(0)
   const [isInitializing, setIsInitializing] = useState(false)
@@ -58,7 +58,7 @@ export default function ReactionTimeGame() {
 
 
           console.log("trying now with: ", selectedNetwork.id)
-          await initData(selectedNetwork.id, 10) 
+          await initData(selectedNetwork.id, 20) 
           console.log(`Initialized ${selectedNetwork.name} with pre-signed transactions`)
           // Check balance first
           const balance = await checkBalance(selectedNetwork.id)
@@ -296,11 +296,6 @@ export default function ReactionTimeGame() {
             <Loader2 className="animate-spin text-primary" size={18} />
             <span>Transaction pending on {selectedNetwork.name}...</span>
           </div>
-          {poolStatus && (
-            <div className="text-xs text-muted-foreground mt-1">
-              Transactions remaining: {poolStatus.available}
-            </div>
-          )}
         </div>
       )}
 
