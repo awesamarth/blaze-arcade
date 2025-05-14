@@ -1,7 +1,7 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-mega deploy foundry-app/src/Updater.sol:Updater 
 forge script script/Counter.s.sol --broadcast --rpc-url 127.0.0.1:8545 --account demo
+cast send 0xD93Eff0A044dD8fd1609F20e48E76abBCE4c74bA --value 1ether --rpc-url http://localhost:8545 --account demo
 
 ## Getting Started
 
