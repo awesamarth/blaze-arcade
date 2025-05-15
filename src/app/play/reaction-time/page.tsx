@@ -10,6 +10,7 @@ import { useBlockchainUtils } from '@/hooks/useBlockchainUtils'
 import { getEmbeddedConnectedWallet, useWallets } from '@privy-io/react-auth'
 import { callFaucet } from '@/utils'
 import { LoginPrompt } from '@/components/LoginPrompt'
+import { NetworkPrompt } from '@/components/NetworkPrompt'
 
 enum GameState {
   IDLE = 'idle',
@@ -32,7 +33,7 @@ export default function ReactionTimeGame() {
   const [totalReactionTime, setTotalReactionTime] = useState<number>(0)
   const [totalBlockchainTime, setTotalBlockchainTime] = useState<number>(0)
   const [isWeb3Enabled, setIsWeb3Enabled] = useState<boolean>(true)
-  const [selectedNetwork, setSelectedNetwork] = useState<Network>(NETWORKS[3])
+  const [selectedNetwork, setSelectedNetwork] = useState<Network>(NETWORKS[0])
   const [showToast, setShowToast] = useState(false)
   const [txStartTime, setTxStartTime] = useState(0)
   const [isInitializing, setIsInitializing] = useState(false)
@@ -52,13 +53,13 @@ export default function ReactionTimeGame() {
 
   useEffect(() => {
     const initializeNetwork = async () => {
-      if (isWeb3Enabled && selectedNetwork && embeddedWallet?.address) {
+      if (isWeb3Enabled && selectedNetwork && selectedNetwork.id !== 'select' && embeddedWallet?.address) {
         setIsInitializing(true)
         try {
 
 
           console.log("trying now with: ", selectedNetwork.id)
-          await initData(selectedNetwork.id, 20) 
+          await initData(selectedNetwork.id, 10)
           console.log(`Initialized ${selectedNetwork.name} with pre-signed transactions`)
           // Check balance first
           const balance = await checkBalance(selectedNetwork.id)
@@ -154,7 +155,7 @@ export default function ReactionTimeGame() {
       case GameState.READY:
         const now = performance.now();
         const reactionTime = Math.round(now - readyTimeRef.current) - ADJUSTMENT
-        if (isWeb3Enabled) {
+        if (isWeb3Enabled && selectedNetwork.id !== 'select') {
           setTxStartTime(performance.now());
           setGameState(GameState.PENDING);
           setShowToast(true);
@@ -268,9 +269,9 @@ export default function ReactionTimeGame() {
       case GameState.WAITING: return 'Wait for green...';
       case GameState.READY: return 'Click Now!';
       case GameState.PENDING: return 'Processing Transaction...';
-      case GameState.FINISHED: return 'Game Complete! Click to Play Again';
+      case GameState.FINISHED: return 'Game Complete! Scroll down to see results. Click to Play Again';
       case GameState.GAME_OVER: return 'Game Over! Clicked too early. Click to Try Again';
-      case GameState.TRANSACTION_FAILED: return 'Transaction Failed! Click to Try Again';  // New message
+      case GameState.TRANSACTION_FAILED: return 'Transaction Failed! Click to Try Again';
       default: return 'Click to Start';
     }
   };
@@ -286,145 +287,160 @@ export default function ReactionTimeGame() {
 
 
     <div className="flex flex-col items-center min-h-screen">
-         {!embeddedWallet ? (
-      <LoginPrompt />
-    ) :
-      (<>
-      {showToast && (
-        <div className="fixed top-24 right-6 z-50 bg-card border border-border p-4 rounded-lg shadow-lg animate-in fade-in slide-in-from-right-5">
-          <div className="flex items-center gap-2">
-            <Loader2 className="animate-spin text-primary" size={18} />
-            <span>Transaction pending on {selectedNetwork.name}...</span>
-          </div>
-        </div>
-      )}
-
-      {isInitializing && (
-        <div className="fixed top-24 left-6 z-50 bg-card border border-border p-4 rounded-lg shadow-lg">
-          <div className="flex items-center gap-2">
-            <Loader2 className="animate-spin text-primary" size={18} />
-            <span>Initializing {selectedNetwork.name}...</span>
-          </div>
-        </div>
-      )}
-
-      <div className="fixed top-22 left-6 z-10">
-        <Link
-          href="/play"
-          className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft size={20} />
-          <span>Back to Games</span>
-        </Link>
-      </div>
-
-      <div className="w-full max-w-4xl px-6 md:px-12 pt-24 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl md:text-4xl font-bold font-[family-name:var(--font-doom)]">
-            <span className={isDark ? "text-white" : "text-black"}>REACTION</span>
-            <span className="text-red-500 ml-2">TIME</span>
-          </h1>
-          <div className="w-36 flex-shrink-0">
-            <NetworkSelector
-              isWeb3Enabled={isWeb3Enabled}
-              selectedNetwork={selectedNetwork}
-              onToggleWeb3={handleToggleWeb3}
-              onSelectNetwork={handleNetworkSelect}
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 mb-6">
-          <p className="text-lg font-rajdhani">
-            Click when the box turns green - {isWeb3Enabled ? `each click is recorded on ${selectedNetwork.name} Testnet` : 'Web3 mode is disabled'}
-          </p>
-        </div>
-
-        <div
-          className={cn(
-            "w-full select-none aspect-video rounded-lg flex flex-col items-center justify-center cursor-pointer shadow-lg text-center",
-            getContainerStyle(),
-            gameState === GameState.PENDING || isInitializing ? "cursor-wait pointer-events-none" : ""
-          )}
-          onClick={handleClick}
-        >
-          <h2 className="text-white text-2xl md:text-4xl font-bold mb-4 px-4">
-            {getMessage()}
-          </h2>
-
-          {gameState === GameState.PENDING && (
-            <Loader2 className="animate-spin text-white" size={32} />
-          )}
-
-          {(gameState === GameState.WAITING || gameState === GameState.READY) && (
-            <div className="text-white text-xl">
-              Attempt {attempts + 1} of 5
+      {!embeddedWallet ? (
+        <LoginPrompt />
+      ) :
+        (<>
+          {showToast && (
+            <div className="fixed top-24 right-6 z-50 bg-card border border-border p-4 rounded-lg shadow-lg animate-in fade-in slide-in-from-right-5">
+              <div className="flex items-center gap-2">
+                <Loader2 className="animate-spin text-primary" size={18} />
+                <span>Transaction pending on {selectedNetwork.name}...</span>
+              </div>
             </div>
           )}
-        </div>
 
-        {gameState === GameState.FINISHED && results.length > 0 && (
-          <div className="mt-8 p-6 border border-border rounded-lg">
-            <h3 className="text-xl font-bold mb-4">Results</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              {isWeb3Enabled ? (
-                <>
-                  <div className="p-4 border border-border rounded-lg bg-card/40">
-                    <div className="text-lg font-medium mb-2">Average Time (with blockchain)</div>
-                    <div className="text-3xl font-bold text-purple-500">{avgTotalTime} ms</div>
-                  </div>
-                  <div className="p-4 border border-border rounded-lg bg-card/40">
-                    <div className="text-lg font-medium mb-2">Average Time (without blockchain)</div>
-                    <div className="text-3xl font-bold text-green-500">{avgReactionTime} ms</div>
-                  </div>
-                </>
-              ) : (
-                <div className="p-4 border border-border rounded-lg bg-card/40 md:col-span-2">
-                  <div className="text-lg font-medium mb-2">Average Reaction Time</div>
-                  <div className="text-3xl font-bold text-green-500">{avgReactionTime} ms</div>
-                </div>
-              )}
+          {isInitializing && (
+            <div className="fixed top-24 left-6 z-50 bg-card border border-border p-4 rounded-lg shadow-lg">
+              <div className="flex items-center gap-2">
+                <Loader2 className="animate-spin text-primary" size={18} />
+                <span>Initializing {selectedNetwork.name}...</span>
+              </div>
+            </div>
+          )}
+
+          <div className="fixed top-22 left-6 z-10">
+            <Link
+              href="/play"
+              className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft size={20} />
+              <span>Back to Games</span>
+            </Link>
+          </div>
+
+          <div className="w-full max-w-4xl px-6 md:px-12 pt-24 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-3xl md:text-4xl font-bold font-[family-name:var(--font-doom)]">
+                <span className={isDark ? "text-white" : "text-black"}>REACTION</span>
+                <span className="text-red-500 ml-2">TIME</span>
+              </h1>
+              <div className="w-44 flex-shrink-0">
+                <NetworkSelector
+                  isWeb3Enabled={isWeb3Enabled}
+                  selectedNetwork={selectedNetwork}
+                  onToggleWeb3={handleToggleWeb3}
+                  onSelectNetwork={handleNetworkSelect}
+                />
+              </div>
             </div>
 
-            {isWeb3Enabled && (
-              <div className="border-t border-border pt-4">
-                <h4 className="font-medium mb-2">
-                  {`${selectedNetwork.name} Testnet Transaction Overhead: ${avgBlockchainTime} ms`}
-                </h4>
-                <p className="text-muted-foreground text-sm">
-                  This is how much time the blockchain adds to each reaction.
-                  Look how much it holds you back
+            {!(isWeb3Enabled && selectedNetwork.id === 'select') && (
+              <div className="flex items-center gap-2 mb-6">
+                <p className="text-lg font-rajdhani">
+                  Click when the box turns green - {isWeb3Enabled ? `each click is recorded on ${selectedNetwork.name} Testnet` : 'Web3 mode is disabled'}
                 </p>
               </div>
             )}
 
-            <div className="mt-6">
-              <h4 className="font-medium mb-2">Individual Attempts</h4>
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-2">Attempt</th>
-                    <th className="text-right py-2">Reaction Time</th>
-                    {isWeb3Enabled && <th className="text-right py-2">Blockchain Time</th>}
-                    {isWeb3Enabled && <th className="text-right py-2">Total Time</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.map((result, index) => (
-                    <tr key={index} className="border-b border-border">
-                      <td className="py-2">{index + 1}</td>
-                      <td className="text-right py-2">{result.reactionTime} ms</td>
-                      {isWeb3Enabled && <td className="text-right py-2">{result.blockchainTime} ms</td>}
-                      {isWeb3Enabled && <td className="text-right py-2">{result.reactionTime + result.blockchainTime} ms</td>}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {isWeb3Enabled && selectedNetwork.id === 'select' && (
+              <div className="mb-6">
+                <NetworkPrompt />
+              </div>
+            )}
+
+            {(!isWeb3Enabled || selectedNetwork.id !== 'select') && (
+              <div
+                className={cn(
+                  "w-full select-none aspect-video rounded-lg flex flex-col items-center justify-center cursor-pointer shadow-lg text-center",
+                  getContainerStyle(),
+                  gameState === GameState.PENDING || isInitializing ? "cursor-wait pointer-events-none" : ""
+                )}
+                onClick={handleClick}
+              >
+                <h2 className="text-white text-2xl md:text-4xl font-bold mb-4 px-4">
+                  {getMessage()}
+                </h2>
+
+                {gameState === GameState.PENDING && (
+                  <Loader2 className="animate-spin text-white" size={32} />
+                )}
+
+                {(gameState === GameState.WAITING || gameState === GameState.READY) && (
+                  <div className="text-white text-xl">
+                    Attempt {attempts + 1} of 5
+                  </div>
+                )}
+              </div>
+            )}
+
+
+
+
+
+
+            {gameState === GameState.FINISHED && results.length > 0 && (
+              <div className="mt-8 p-6 border border-border rounded-lg">
+                <h3 className="text-xl font-bold mb-4">Results</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  {isWeb3Enabled ? (
+                    <>
+                      <div className="p-4 border border-border rounded-lg bg-card/40">
+                        <div className="text-lg font-medium mb-2">Average Time (with blockchain)</div>
+                        <div className="text-3xl font-bold text-purple-500">{avgTotalTime} ms</div>
+                      </div>
+                      <div className="p-4 border border-border rounded-lg bg-card/40">
+                        <div className="text-lg font-medium mb-2">Average Time (without blockchain)</div>
+                        <div className="text-3xl font-bold text-green-500">{avgReactionTime} ms</div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-4 border border-border rounded-lg bg-card/40 md:col-span-2">
+                      <div className="text-lg font-medium mb-2">Average Reaction Time</div>
+                      <div className="text-3xl font-bold text-green-500">{avgReactionTime} ms</div>
+                    </div>
+                  )}
+                </div>
+
+                {isWeb3Enabled && (
+                  <div className="border-t border-border pt-4">
+                    <h4 className="font-medium mb-2">
+                      {`${selectedNetwork.name} Testnet Transaction Overhead: ${avgBlockchainTime} ms`}
+                    </h4>
+                    <p className="text-muted-foreground text-sm">
+                      This is how much time the blockchain adds to each reaction.
+                      Look how much it holds you back
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-6">
+                  <h4 className="font-medium mb-2">Individual Attempts</h4>
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2">Attempt</th>
+                        <th className="text-right py-2">Reaction Time</th>
+                        {isWeb3Enabled && <th className="text-right py-2">Blockchain Time</th>}
+                        {isWeb3Enabled && <th className="text-right py-2">Total Time</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {results.map((result, index) => (
+                        <tr key={index} className="border-b border-border">
+                          <td className="py-2">{index + 1}</td>
+                          <td className="text-right py-2">{result.reactionTime} ms</td>
+                          {isWeb3Enabled && <td className="text-right py-2">{result.blockchainTime} ms</td>}
+                          {isWeb3Enabled && <td className="text-right py-2">{result.reactionTime + result.blockchainTime} ms</td>}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-      </>)}
+        </>)}
     </div>
   );
 }
