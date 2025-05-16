@@ -68,8 +68,9 @@ export default function ReactionTimeGame() {
           if (balance === 0n) {
             console.log(`Balance is 0 on ${selectedNetwork.name}, calling faucet...`)
             await callFaucet(embeddedWallet.address, selectedNetwork.id)
-            // Optional: Wait a bit for tokens to arrive before initializing
-            // await new Promise(resolve => setTimeout(resolve, 2000))
+            if (window.refetchBalance) {
+              window.refetchBalance();
+            }
           }
         } catch (error) {
           console.error(`Failed to initialize ${selectedNetwork.name}:`, error)
@@ -101,6 +102,16 @@ export default function ReactionTimeGame() {
       toastTimeoutRef.current = null;
     }
   }, []);
+
+  const resetGame = useCallback(() => {
+  setGameState(GameState.IDLE);
+  setAttempts(0);
+  setResults([]);
+  setTotalReactionTime(0);
+  setTotalBlockchainTime(0);
+  setShowToast(false);
+  clearAllTimers();
+}, [clearAllTimers]);
 
   const startGame = useCallback(() => {
     if (![GameState.IDLE, GameState.FINISHED, GameState.GAME_OVER, GameState.TRANSACTION_FAILED].includes(gameState)) return;
@@ -199,6 +210,9 @@ export default function ReactionTimeGame() {
               frameRequestRef.current = requestAnimationFrame(checkTime);
             } else {
               setGameState(GameState.FINISHED);
+              if (window.refetchBalance) {
+                window.refetchBalance();
+              }
             }
 
           } catch (error) {
@@ -241,13 +255,17 @@ export default function ReactionTimeGame() {
   }, [gameState, attempts, startGame, isWeb3Enabled, selectedNetwork.id, clearAllTimers, sendUpdate]);
 
   const handleToggleWeb3 = async (enabled: boolean) => {
-    if (gameState === GameState.PENDING || isInitializing) return; // Add isInitializing check
+    if (gameState === GameState.PENDING || isInitializing) return; 
     setIsWeb3Enabled(enabled);
   };
 
   const handleNetworkSelect = async (network: Network) => {
-    if (gameState === GameState.PENDING || isInitializing) return; // Add isInitializing check
+    if (gameState === GameState.PENDING || isInitializing) return; 
     setSelectedNetwork(network);
+    setGameState(GameState.IDLE); 
+      resetGame(); // Poora reset
+
+
   };
 
   const getContainerStyle = () => {

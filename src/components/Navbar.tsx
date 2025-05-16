@@ -36,6 +36,7 @@ export const Navbar = () => {
     setMounted(true)
   }, [])
 
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (walletDropdownRef.current && !walletDropdownRef.current.contains(event.target as Node)) {
@@ -87,12 +88,18 @@ export const Navbar = () => {
   const parsedChainId = currentChainId ? parseInt(currentChainId.split(':')[1]) : null;
 
   // Get balance of active wallet
-  const { data: balanceData } = useBalance({
+  const { data: balanceData, refetch: refetchBalance } = useBalance({
     //@ts-ignore
     address: embeddedWallet?.address,
     chainId: parsedChainId || undefined, // Add this line
 
   })
+
+  
+  useEffect(() => {
+    // @ts-ignore
+    window.refetchBalance = refetchBalance;
+  }, [refetchBalance]);
 
 
   // Get faucet URL for current chain
