@@ -42,7 +42,7 @@ export default function AimTestGame() {
     const [targetNumber, setTargetNumber] = useState<number>(0)
     const [results, setResults] = useState<AimResult[]>([])
     const [missCount, setMissCount] = useState<number>(0)
-    const [isWeb3Enabled, setIsWeb3Enabled] = useState<boolean>(false)
+    const [isWeb3Enabled, setIsWeb3Enabled] = useState<boolean>(true)
     const [selectedNetwork, setSelectedNetwork] = useState<Network>(NETWORKS[0])
     const [showToast, setShowToast] = useState(false)
     const [isInitializing, setIsInitializing] = useState(false)
