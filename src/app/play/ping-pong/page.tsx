@@ -101,8 +101,23 @@ export default function PingPongGame() {
             this.load.image('ball', '/ping-pong/ball.png')
           },
 
+
           create: function () {
             console.log('Creating game scene...')
+
+            this.capBallSpeed = function (maxSpeed) {
+              const velocity = this.ball.body.velocity;
+              const currentSpeed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
+
+              if (currentSpeed > maxSpeed) {
+                const scale = maxSpeed / currentSpeed;
+                this.ball.body.velocity.x *= scale;
+                this.ball.body.velocity.y *= scale;
+              }
+            }.bind(this);
+
+            // Add gameStarted flag to gameState
+            gameState.started = false;
 
             // Allow ball to exit top/bottom for game over
             this.physics.world.checkCollision.up = false
@@ -134,12 +149,46 @@ export default function PingPongGame() {
             this.physics.world.enable(this.playerPaddle)
             this.physics.world.enable(this.aiPaddle)
 
-            // Set initial ball velocity
-            this.ball.setVelocity(Phaser.Math.Between(-200, 200), 400)
+            // Set initial ball velocity to 0 (stationary)
+            this.ball.setVelocity(0, 0);
 
+            // Create start button
+            this.startButton = this.add.text(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2, 'Start Game', {
+              fontFamily: 'Arial',
+              fontSize: '40px',
+              color: '#ffffff',
+              backgroundColor: '#10B981', // Green background
+              padding: { x: 30, y: 15 }
+            }).setOrigin(0.5).setInteractive();
+
+            // Add hover effects
+            this.startButton.on('pointerover', () => {
+              this.startButton.setStyle({ backgroundColor: '#059669' }); // Darker green on hover
+              this.input.setDefaultCursor('pointer');
+            });
+
+            this.startButton.on('pointerout', () => {
+              this.startButton.setStyle({ backgroundColor: '#10B981' });
+              this.input.setDefaultCursor('default');
+            });
+
+            // Start game when button is clicked
+            this.startButton.on('pointerdown', () => {
+              if (!gameState.started && !gameState.gameOver) {
+                // Start the ball
+                this.ball.setVelocity(Phaser.Math.Between(-200, 200), 300);
+                this.capBallSpeed(2000);
+
+                // Hide the button
+                this.startButton.setVisible(false);
+
+                // Set game as started
+                gameState.started = true;
+              }
+            });
 
             // Set up collisions with debug logging
-            // Modify the AI paddle collision handler:
+            // Keep the AI paddle collision handler mostly the same (already triggers transactions)
             this.physics.add.collider(this.ball, this.aiPaddle, () => {
               console.log('AI paddle hit!')
 
@@ -167,93 +216,54 @@ export default function PingPongGame() {
                     .then(() => {
                       if (this.ball) {
                         // Add some randomness to the rebound
-                        let newVelocityX = savedVelocity.x + Phaser.Math.Between(-50, 50)
+                        let newVelocityX = savedVelocity.x + Phaser.Math.Between(-100, 100)
                         // Use positive Y velocity for AI paddle hits
                         let newVelocityY = Math.abs(savedVelocity.y) * 1.05 // Increase by 5%
                         this.ball.body.velocity.set(newVelocityX, newVelocityY)
+                        this.capBallSpeed(2000)
                       }
                       transactionPendingRef.current = false
                       setShowToast(false)
                     })
                     .catch((error) => {
                       console.error('Transaction error:', error)
-                      if (this.ball) {
-                        // Still continue game in case of error
-                        let newVelocityX = savedVelocity.x + Phaser.Math.Between(-50, 50)
-                        let newVelocityY = Math.abs(savedVelocity.y) * 1.05
-                        this.ball.body.velocity.set(newVelocityX, newVelocityY)
-                      }
-                      transactionPendingRef.current = false
                       setShowToast(false)
                     })
                 } else {
                   // If web3 is disabled, just handle the bounce
-                  let newVelocityX = currentVelocity.x + Phaser.Math.Between(-50, 50)
+                  let newVelocityX = currentVelocity.x + Phaser.Math.Between(-100, 100)
                   let newVelocityY = Math.abs(currentVelocity.y) * 1.05 // Increase by 5%
                   this.ball.body.velocity.set(newVelocityX, newVelocityY)
+                  console.log("this one triggered ")
+                  console.log(this.ball.body.velocity)
+                  this.capBallSpeed(2000)
                 }
               }
             }, null, this)
 
+            // Modify the player paddle collision handler to remove transaction logic
             this.physics.add.collider(this.ball, this.playerPaddle, () => {
               console.log('Player paddle hit!')
-              if (!transactionPendingRef.current) {
-                console.log('Ball hit! Current score:', gameState.playerScore)
-                // Increment score immediately
-                gameState.playerScore++
-                // Update both the game state and React state
-                setScore(prevScore => {
-                  const newScore = { player: prevScore.player + 1 }
-                  return newScore
-                })
-                this.playerScoreText.setText(`Score: ${gameState.playerScore}`)
 
-                // Handle blockchain transaction if web3 is enabled
-                if (isWeb3Enabled && selectedNetwork.id !== 'select') {
-                  transactionPendingRef.current = true
-                  setShowToast(true)
+              // Increment score immediately (keep this part)
+              console.log('Ball hit! Current score:', gameState.playerScore)
+              gameState.playerScore++
+              setScore(prevScore => {
+                const newScore = { player: prevScore.player + 1 }
+                return newScore
+              })
+              this.playerScoreText.setText(`Score: ${gameState.playerScore}`)
 
-                  // Save current ball velocity
-                  const currentVelocity = {
-                    x: this.ball.body.velocity.x,
-                    y: this.ball.body.velocity.y
-                  }
+              // Just handle the bounce directly with no transaction
+              const currentVelocity = this.ball.body.velocity
+              let newVelocityX = currentVelocity.x + Phaser.Math.Between(-100, 100)
+              let newVelocityY = -Math.abs(currentVelocity.y) * 1.05 // Increase by 5%
+              this.ball.body.velocity.set(newVelocityX, newVelocityY)
+              console.log("player paddle hit")
+              console.log(this.ball.body.velocity)
+              this.capBallSpeed(2000)
 
-                  // Pause ball
-                  this.ball.body.velocity.set(0, 0)
-
-                  // Send transaction and resume game when complete
-                  sendUpdate(selectedNetwork.id)
-                    .then(() => {
-                      if (this.ball) {
-                        // Add some randomness to the rebound
-                        let newVelocityX = currentVelocity.x + Phaser.Math.Between(-50, 50)
-                        // Invert Y velocity for rebound and increase speed
-                        this.ball.body.velocity.set(newVelocityX, -Math.abs(currentVelocity.y) * 1.05)
-                      }
-                      transactionPendingRef.current = false
-                      setShowToast(false)
-                    })
-                    .catch((error) => {
-                      console.error('Transaction error:', error)
-                      if (this.ball) {
-                        // Still continue game in case of error
-                        let newVelocityX = currentVelocity.x + Phaser.Math.Between(-50, 50)
-                        this.ball.body.velocity.set(newVelocityX, -Math.abs(currentVelocity.y))
-                      }
-                      transactionPendingRef.current = false
-                      setShowToast(false)
-                    })
-                } else {
-                  // If web3 is disabled, just handle the bounce
-                  const currentVelocity = this.ball.body.velocity
-                  let newVelocityX = currentVelocity.x + Phaser.Math.Between(-50, 50)
-                  let newVelocityY = -Math.abs(currentVelocity.y) * 1.05 // Increase by 5%
-                  this.ball.body.velocity.set(newVelocityX, newVelocityY)
-                }
-              }
             }, null, this)
-
             // Set up input
             this.cursors = this.input.keyboard.createCursorKeys()
 
@@ -299,18 +309,23 @@ export default function PingPongGame() {
             }).setOrigin(0.5).setInteractive().setVisible(false)
 
             // Bind resetGame to this scene context
+            // Bind resetGame to this scene context
             this.resetGame = function () {
               // Reset game state
               gameState.gameOver = false
               gameState.playerScore = 0
+              gameState.started = true // Set to true immediately so game starts
+
               // Reset both game state and React state
               setScore({ player: 0 })
 
-              // Hide UI
+              // Hide game over UI
               this.gameOverText.setVisible(false)
               this.restartButton.setVisible(false)
-                this.finalScoreText.setVisible(false)  
+              this.finalScoreText.setVisible(false)
 
+              // Keep start button hidden since we're starting right away
+              this.startButton.setVisible(false)
 
               // Reset paddle positions
               this.playerPaddle.x = WINDOW_WIDTH / 2
@@ -324,7 +339,8 @@ export default function PingPongGame() {
 
               // Start ball movement after short delay
               this.time.delayedCall(500, () => {
-                this.ball.setVelocity(Phaser.Math.Between(-150, 150), 250)
+                this.ball.setVelocity(Phaser.Math.Between(-150, 150), 300)
+                this.capBallSpeed(2000);
               })
             }.bind(this)
 
@@ -340,6 +356,7 @@ export default function PingPongGame() {
               this.resetGame()
             })
           },
+
 
           update: function () {
             if (gameState.gameOver || transactionPendingRef.current) return
@@ -413,6 +430,7 @@ export default function PingPongGame() {
               gravity: { x: 0, y: 0 },
               debug: true,
               tileBias: 32,
+              fps: 120,
               timeScale: 1
             }
           },
@@ -491,7 +509,7 @@ export default function PingPongGame() {
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-3xl md:text-4xl font-bold font-[family-name:var(--font-doom)]">
                 <span className={isDark ? "text-white" : "text-black"}>PING</span>
-                <span className="text-yellow-400 ml-2">PONG</span>
+                <span className="text-green-500 ml-2">PONG</span>
               </h1>
               <div className="w-44 flex-shrink-0">
                 <NetworkSelector
@@ -539,9 +557,9 @@ export default function PingPongGame() {
                   <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
                     <li>Move your paddle at the bottom using your mouse or left/right arrow keys</li>
                     <li>Your score increases each time your paddle hits the ball</li>
-                    <li>When the ball hits your paddle, a blockchain transaction is triggered</li>
+                    <li>When the AI paddle hits the ball, a blockchain transaction is triggered</li>
                     <li>The ball freezes until the transaction is confirmed</li>
-                    <li>Game ends when you miss the ball</li>
+                    <li>Game ends when you miss the ball or when a transaction fails</li>
                   </ul>
                 </div>
               </div>
