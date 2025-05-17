@@ -8,9 +8,17 @@ import {
   Keyboard,
   Table,
   Music,
-  Hammer,
-  
+  Worm
+
 } from 'lucide-react'
+import {
+  PingPongIcon,
+  GuitarIcon,
+  HammerIcon,
+  BoxingGloveIcon
+} from "@phosphor-icons/react"
+
+
 import { GameCard } from '@/components/GameCard'
 
 export default function PlayPage() {
@@ -83,7 +91,7 @@ export default function PlayPage() {
 
         {/* Game Card - Ping Pong */}
         <GameCard
-          icon={<Table className="text-green-500" size={48} />}
+          icon={<PingPongIcon className="text-green-500" size={48} weight="fill" />}
           title="Ping Pong"
           link="/play/ping-pong"
           description="Battle against an AI opponent where both player moves happen on-chain."
@@ -91,7 +99,7 @@ export default function PlayPage() {
 
         {/* Game Card - Snake */}
         <GameCard
-          icon={<Table className="text-yellow-500" size={48} />}
+          icon={<Worm className="text-yellow-500" size={48} />}
           title="Snake"
           link="/play/snake"
           description="Navigate your snake when every turn and movement is recorded on-chain."
@@ -99,7 +107,7 @@ export default function PlayPage() {
 
         {/* Game Card - Guitar Hero */}
         <GameCard
-          icon={<Music className="text-purple-400" size={48} />}
+          icon={<GuitarIcon className="text-purple-400" size={48} weight="fill" />}
           title="Guitar Hero"
           link="/play/guitar-hero"
           description="Hit the right notes in rhythm while each note is verified on-chain."
@@ -107,7 +115,7 @@ export default function PlayPage() {
 
         {/* Game Card - Whack-a-Mole */}
         <GameCard
-          icon={<Hammer className="text-orange-500" size={48} />}
+          icon={<HammerIcon className="text-orange-500" size={48} weight="fill" />}
           title="Whack-a-Mole"
           link="/play/whack-a-mole"
           description="Test your reflexes to whack moles with every hit recorded on-chain."
@@ -115,7 +123,7 @@ export default function PlayPage() {
 
         {/* Game Card - Boxing */}
         <GameCard
-          icon={<Table className="text-red-600" size={48} />}
+          icon={<BoxingGloveIcon className="text-red-600" size={48} weight="fill" />}
           title="Boxing"
           link="/play/boxing"
           description="Throw punches and dodge in this on-chain boxing simulation."

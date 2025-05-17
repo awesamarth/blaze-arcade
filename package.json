@@ -10,6 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.8",
     "@privy-io/react-auth": "^2.13.1",
     "@privy-io/wagmi": "^1.0.3",
     "@reown/appkit": "^1.7.4",

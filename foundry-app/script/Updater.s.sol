@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import {Script, console} from "forge-std/Script.sol";
 import {Updater} from "../src/Updater.sol";
 
-contract CounterScript is Script {
+contract UpdaterScript is Script {
     Updater public updater;
 
     function setUp() public {}
