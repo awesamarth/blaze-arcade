@@ -104,14 +104,14 @@ export default function ReactionTimeGame() {
   }, []);
 
   const resetGame = useCallback(() => {
-  setGameState(GameState.IDLE);
-  setAttempts(0);
-  setResults([]);
-  setTotalReactionTime(0);
-  setTotalBlockchainTime(0);
-  setShowToast(false);
-  clearAllTimers();
-}, [clearAllTimers]);
+    setGameState(GameState.IDLE);
+    setAttempts(0);
+    setResults([]);
+    setTotalReactionTime(0);
+    setTotalBlockchainTime(0);
+    setShowToast(false);
+    clearAllTimers();
+  }, [clearAllTimers]);
 
   const startGame = useCallback(() => {
     if (![GameState.IDLE, GameState.FINISHED, GameState.GAME_OVER, GameState.TRANSACTION_FAILED].includes(gameState)) return;
@@ -255,15 +255,15 @@ export default function ReactionTimeGame() {
   }, [gameState, attempts, startGame, isWeb3Enabled, selectedNetwork.id, clearAllTimers, sendUpdate]);
 
   const handleToggleWeb3 = async (enabled: boolean) => {
-    if (gameState === GameState.PENDING || isInitializing) return; 
+    if (gameState === GameState.PENDING || isInitializing) return;
     setIsWeb3Enabled(enabled);
   };
 
   const handleNetworkSelect = async (network: Network) => {
-    if (gameState === GameState.PENDING || isInitializing) return; 
+    if (gameState === GameState.PENDING || isInitializing) return;
     setSelectedNetwork(network);
-    setGameState(GameState.IDLE); 
-      resetGame(); // Poora reset
+    setGameState(GameState.IDLE);
+    resetGame();
 
 
   };
@@ -425,10 +425,12 @@ export default function ReactionTimeGame() {
                     <h4 className="font-medium mb-2">
                       {`${selectedNetwork.name} Testnet Transaction Overhead: ${avgBlockchainTime} ms`}
                     </h4>
-                    <p className="text-muted-foreground text-sm">
-                      This is how much time the blockchain adds to each reaction.
-                      Look how much it holds you back
+                    <p className="text-muted-foreground text-sm mb-2">
+                      Look. This is how much {selectedNetwork.name} is holding you back 
                     </p>
+                    <div className="font-medium text-xl text-red-500">
+                      {`Performance Impact: ${Math.round((avgBlockchainTime / avgReactionTime) * 100)}% slower`}
+                    </div>
                   </div>
                 )}
 
@@ -441,17 +443,22 @@ export default function ReactionTimeGame() {
                         <th className="text-right py-2">Reaction Time</th>
                         {isWeb3Enabled && <th className="text-right py-2">Blockchain Time</th>}
                         {isWeb3Enabled && <th className="text-right py-2">Total Time</th>}
+                        {isWeb3Enabled && <th className="text-right py-2">Impact</th>}
                       </tr>
                     </thead>
                     <tbody>
-                      {results.map((result, index) => (
-                        <tr key={index} className="border-b border-border">
-                          <td className="py-2">{index + 1}</td>
-                          <td className="text-right py-2">{result.reactionTime} ms</td>
-                          {isWeb3Enabled && <td className="text-right py-2">{result.blockchainTime} ms</td>}
-                          {isWeb3Enabled && <td className="text-right py-2">{result.reactionTime + result.blockchainTime} ms</td>}
-                        </tr>
-                      ))}
+                      {results.map((result, index) => {
+                        const impactPercentage = Math.round((result.blockchainTime / result.reactionTime) * 100);
+                        return (
+                          <tr key={index} className="border-b border-border">
+                            <td className="py-2">{index + 1}</td>
+                            <td className="text-right py-2">{result.reactionTime} ms</td>
+                            {isWeb3Enabled && <td className="text-right py-2">{result.blockchainTime} ms</td>}
+                            {isWeb3Enabled && <td className="text-right py-2">{result.reactionTime + result.blockchainTime} ms</td>}
+                            {isWeb3Enabled && <td className="text-right py-2 text-red-500 font-medium">{impactPercentage}%</td>}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

@@ -214,7 +214,7 @@ export default function AimTestGame() {
     const handleNetworkSelect = async (network: Network) => {
         if (gameState === GameState.PENDING || isInitializing) return
         setSelectedNetwork(network)
-        resetGame(); 
+        resetGame();
 
     }
 
@@ -388,10 +388,12 @@ export default function AimTestGame() {
                                         <h4 className="font-medium mb-2">
                                             {`${selectedNetwork.name} Testnet Transaction Overhead: ${avgBlockchainTime} ms`}
                                         </h4>
-                                        <p className="text-muted-foreground text-sm">
-                                            This is how much time the blockchain adds to each target hit.
-                                            See how it affects your aim speed!
+                                        <p className="text-muted-foreground text-sm mb-2">
+                                            Look. This is how much {selectedNetwork.name} is holding you back
                                         </p>
+                                        <div className="font-medium text-xl text-red-500">
+                                            {`Performance Impact: ${Math.round((avgBlockchainTime / avgTargetTime) * 100)}% slower`}
+                                        </div>
                                     </div>
                                 )}
 
@@ -404,17 +406,22 @@ export default function AimTestGame() {
                                                 <th className="text-right py-2">Aim Time</th>
                                                 {isWeb3Enabled && <th className="text-right py-2">Blockchain Time</th>}
                                                 {isWeb3Enabled && <th className="text-right py-2">Total Time</th>}
+                                                {isWeb3Enabled && <th className="text-right py-2">Impact</th>}
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {results.map((result, index) => (
-                                                <tr key={index} className="border-b border-border">
-                                                    <td className="py-2">{index + 1}</td>
-                                                    <td className="text-right py-2">{result.targetTime} ms</td>
-                                                    {isWeb3Enabled && <td className="text-right py-2">{result.blockchainTime} ms</td>}
-                                                    {isWeb3Enabled && <td className="text-right py-2">{result.targetTime + result.blockchainTime} ms</td>}
-                                                </tr>
-                                            ))}
+                                            {results.map((result, index) => {
+                                                const impactPercentage = Math.round((result.blockchainTime / result.targetTime) * 100);
+                                                return (
+                                                    <tr key={index} className="border-b border-border">
+                                                        <td className="py-2">{index + 1}</td>
+                                                        <td className="text-right py-2">{result.targetTime} ms</td>
+                                                        {isWeb3Enabled && <td className="text-right py-2">{result.blockchainTime} ms</td>}
+                                                        {isWeb3Enabled && <td className="text-right py-2">{result.targetTime + result.blockchainTime} ms</td>}
+                                                        {isWeb3Enabled && <td className="text-right py-2 text-red-500 font-medium">{impactPercentage}%</td>}
+                                                    </tr>
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>

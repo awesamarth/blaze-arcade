@@ -28,6 +28,9 @@ export default function PingPongGame() {
   const gameRef = useRef<HTMLDivElement>(null)
   const gameInstanceRef = useRef<any>(null)
   const transactionPendingRef = useRef<boolean>(false)
+  const isInitializingRef = useRef(false);
+
+
 
   const isDark = isMounted && resolvedTheme === 'dark'
   const { wallets } = useWallets()
@@ -39,11 +42,40 @@ export default function PingPongGame() {
     setIsMounted(true)
   }, [])
 
+  useEffect(() => {
+    isInitializingRef.current = isInitializing;
+    if (gameInstanceRef.current && gameInstanceRef.current.scene.scenes[0]) {
+      const scene = gameInstanceRef.current.scene.scenes[0];
+      if (scene.updateStartButton) {
+        scene.updateStartButton();
+
+        // If we just finished initializing and pointer is already over button
+        if (!isInitializing && scene.input && scene.startButton) {
+          const pointer = scene.input.activePointer;
+          const buttonBounds = scene.startButton.getBounds();
+          if (pointer && buttonBounds.contains(pointer.x, pointer.y)) {
+            scene.input.setDefaultCursor('pointer');
+            scene.startButton.setStyle({ backgroundColor: '#059669' }); // Darker green on hover
+          }
+        }
+      }
+    }
+  }, [isInitializing]);
+
   // Initialize blockchain for the selected network
   useEffect(() => {
     const initializeNetwork = async () => {
       if (isWeb3Enabled && selectedNetwork && selectedNetwork.id !== 'select' && embeddedWallet?.address) {
         setIsInitializing(true)
+
+        if (gameInstanceRef.current && gameInstanceRef.current.scene.scenes[0]) {
+          gameInstanceRef.current.scene.scenes[0].isInitializingNetwork = true;
+
+          // Check if updateStartButton function exists before calling
+          if (gameInstanceRef.current.scene.scenes[0].updateStartButton) {
+            gameInstanceRef.current.scene.scenes[0].updateStartButton();
+          }
+        }
         try {
           await initData(selectedNetwork.id, 10)
           console.log(`Initialized ${selectedNetwork.name} with pre-signed transactions`)
@@ -60,12 +92,21 @@ export default function PingPongGame() {
           console.error(`Failed to initialize ${selectedNetwork.name}:`, error)
         } finally {
           setIsInitializing(false)
+          if (gameInstanceRef.current && gameInstanceRef.current.scene.scenes[0]) {
+            gameInstanceRef.current.scene.scenes[0].isInitializingNetwork = false;
+
+            // Check if updateStartButton function exists before calling
+            if (gameInstanceRef.current.scene.scenes[0].updateStartButton) {
+              gameInstanceRef.current.scene.scenes[0].updateStartButton();
+            }
+          }
+
         }
       }
     }
 
     initializeNetwork()
-  }, [selectedNetwork, embeddedWallet?.address, isWeb3Enabled, initData, checkBalance])
+  }, [selectedNetwork, embeddedWallet?.address, isWeb3Enabled])
 
   // Initialize Phaser game
   useEffect(() => {
@@ -99,6 +140,11 @@ export default function PingPongGame() {
           preload: function () {
             this.load.image('paddle', '/ping-pong/paddle.png')
             this.load.image('ball', '/ping-pong/ball.png')
+          },
+
+          init: function () {
+            // Store reference to isInitializing for use in the game scene
+            this.isInitializingNetwork = isInitializing;
           },
 
 
@@ -161,20 +207,40 @@ export default function PingPongGame() {
               padding: { x: 30, y: 15 }
             }).setOrigin(0.5).setInteractive();
 
-            // Add hover effects
+            // Update the button's appearance based on initialization state
+            this.updateStartButton = () => {
+              if (isInitializingRef.current) {
+                this.startButton.setStyle({ backgroundColor: '#9CA3AF' }); // Gray background
+                this.startButton.setText('Initializing...');
+              } else {
+                this.startButton.setStyle({ backgroundColor: '#10B981' }); // Green background
+                this.startButton.setText('Start Game');
+              }
+            };
+
+            // Initial update
+            this.updateStartButton();
+
+            // Add hover effects (only when not initializing)
             this.startButton.on('pointerover', () => {
-              this.startButton.setStyle({ backgroundColor: '#059669' }); // Darker green on hover
-              this.input.setDefaultCursor('pointer');
+              if (!isInitializingRef.current) {
+                this.startButton.setStyle({ backgroundColor: '#059669' }); // Darker green on hover
+                this.input.setDefaultCursor('pointer');
+              }
             });
 
             this.startButton.on('pointerout', () => {
-              this.startButton.setStyle({ backgroundColor: '#10B981' });
+              if (!isInitializingRef.current) {  // <-- Use the ref here instead of this.isInitializingNetwork
+                this.startButton.setStyle({ backgroundColor: '#10B981' });
+              } else {
+                this.startButton.setStyle({ backgroundColor: '#9CA3AF' });
+              }
               this.input.setDefaultCursor('default');
             });
 
-            // Start game when button is clicked
+            // Start game when button is clicked - only if not initializing
             this.startButton.on('pointerdown', () => {
-              if (!gameState.started && !gameState.gameOver) {
+              if (!isInitializingRef.current && !gameState.started && !gameState.gameOver) {
                 // Start the ball
                 this.ball.setVelocity(Phaser.Math.Between(-200, 200), 300);
                 this.capBallSpeed(2000);
@@ -214,7 +280,7 @@ export default function PingPongGame() {
                   // Send transaction and resume game when complete
                   sendUpdate(selectedNetwork.id)
                     .then(() => {
-                      if (this.ball) {
+                      if (this.ball && !gameState.gameOver) {
                         // Add some randomness to the rebound
                         let newVelocityX = savedVelocity.x + Phaser.Math.Between(-100, 100)
                         // Use positive Y velocity for AI paddle hits
@@ -228,19 +294,41 @@ export default function PingPongGame() {
                     .catch((error) => {
                       console.error('Transaction error:', error)
                       setShowToast(false)
+                      transactionPendingRef.current = false
+
+                      // Handle game over due to transaction failure
+                      gameState.gameOver = true
+
+                      // Update game over text for transaction failure
+                      this.gameOverText.setText('Transaction Failed!')
+                      this.gameOverText.setVisible(true)
+
+                      // Update final score text
+                      this.finalScoreText.setText(`Check your balance and try again`)
+                      this.finalScoreText.setVisible(true)
+
+                      // Show restart button
+                      this.restartButton.setVisible(true)
+
+                      // Stop the ball
+                      this.ball.setVelocity(0, 0)
+
+                      // Create tween to fade in UI
+                      this.tweens.add({
+                        targets: [this.gameOverText, this.finalScoreText, this.restartButton],
+                        alpha: { from: 0, to: 1 },
+                        duration: 500
+                      })
                     })
                 } else {
                   // If web3 is disabled, just handle the bounce
                   let newVelocityX = currentVelocity.x + Phaser.Math.Between(-100, 100)
                   let newVelocityY = Math.abs(currentVelocity.y) * 1.05 // Increase by 5%
                   this.ball.body.velocity.set(newVelocityX, newVelocityY)
-                  console.log("this one triggered ")
-                  console.log(this.ball.body.velocity)
                   this.capBallSpeed(2000)
                 }
               }
             }, null, this)
-
             // Modify the player paddle collision handler to remove transaction logic
             this.physics.add.collider(this.ball, this.playerPaddle, () => {
               console.log('Player paddle hit!')
@@ -256,7 +344,7 @@ export default function PingPongGame() {
 
               // Just handle the bounce directly with no transaction
               const currentVelocity = this.ball.body.velocity
-              let newVelocityX = currentVelocity.x + Phaser.Math.Between(-100, 100)
+              let newVelocityX = currentVelocity.x + Phaser.Math.Between(-300, 300)
               let newVelocityY = -Math.abs(currentVelocity.y) * 1.05 // Increase by 5%
               this.ball.body.velocity.set(newVelocityX, newVelocityY)
               console.log("player paddle hit")
@@ -314,9 +402,10 @@ export default function PingPongGame() {
               // Reset game state
               gameState.gameOver = false
               gameState.playerScore = 0
-              gameState.started = true // Set to true immediately so game starts
+              gameState.started = true
 
-              // Reset both game state and React state
+
+              transactionPendingRef.current = false
               setScore({ player: 0 })
 
               // Hide game over UI
@@ -388,7 +477,7 @@ export default function PingPongGame() {
             )
 
             // Perfect AI - follow ball with slight smoothing
-            this.aiPaddle.x = Phaser.Math.Linear(this.aiPaddle.x, this.ball.x, 0.075)
+            this.aiPaddle.x = Phaser.Math.Linear(this.aiPaddle.x, this.ball.x, 0.2)
 
             // Game over if ball passes bottom edge
             if (this.ball.y > WINDOW_HEIGHT + 20) {
