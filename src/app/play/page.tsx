@@ -94,7 +94,7 @@ export default function PlayPage() {
           icon={<PingPongIcon className="text-green-500" size={48} weight="fill" />}
           title="Ping Pong"
           link="/play/ping-pong"
-          description="Battle against an AI opponent where both player moves happen on-chain."
+          description="Battle against an AI opponent where the AI's moves happen on-chain."
         />
 
         {/* Game Card - Snake */}
