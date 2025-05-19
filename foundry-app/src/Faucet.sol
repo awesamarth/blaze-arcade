@@ -9,7 +9,7 @@ contract Faucet {
 
     address public owner;
 
-    uint public constant DRIP_AMOUNT = 0.001 ether;
+    uint public constant DRIP_AMOUNT = 0.05 ether;
 
 
     constructor(){
@@ -17,6 +17,19 @@ contract Faucet {
     }
     function deposit() external payable {
 
+
+    }
+
+    function emergencyWithdraw() external {
+        if(msg.sender != owner){
+            revert NotOwner();
+        }
+        (bool success, ) = payable(owner).call{value: address(this).balance}(
+            ""
+        );
+        if (!success){
+            revert FailedToSend();
+        }
 
     }
 
