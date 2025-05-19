@@ -517,7 +517,7 @@ export default function PingPongGame() {
             default: 'arcade',
             arcade: {
               gravity: { x: 0, y: 0 },
-              debug: true,
+              debug: false,
               tileBias: 32,
               fps: 120,
               timeScale: 1
