@@ -70,7 +70,7 @@ export default function PlayPage() {
           icon={<AlertTriangle className="text-red-500" size={48} />}
           title="Reaction Time"
           link="/play/reaction-time"
-          description="Test how quickly you can react when each click is recorded on-chain."
+          description="Test how quickly you can react when each click is recorded onchain."
         />
 
         {/* Game Card - Typing Test */}
@@ -78,7 +78,7 @@ export default function PlayPage() {
           icon={<Keyboard className="text-purple-600" size={48} />}
           title="Typing Test"
           link="/play/typing-test"
-          description="Type as fast as you can while every word gets recorded on-chain."
+          description="Type as fast as you can while every word gets recorded onchain."
         />
 
         {/* Game Card - Aim Test */}
@@ -86,7 +86,7 @@ export default function PlayPage() {
           icon={<Target className="text-blue-500" size={48} />}
           title="Aim Test"
           link="/play/aim-test"
-          description="Hit targets accurately when each shot is processed on-chain."
+          description="Hit targets accurately when each shot is processed onchain."
         />
 
         {/* Game Card - Ping Pong */}
@@ -94,7 +94,7 @@ export default function PlayPage() {
           icon={<PingPongIcon className="text-green-500" size={48} weight="fill" />}
           title="Ping Pong"
           link="/play/ping-pong"
-          description="Battle against an AI opponent where the AI's moves happen on-chain."
+          description="Battle against an AI opponent where the AI's moves happen onchain."
         />
 
         {/* Game Card - Snake */}
@@ -102,7 +102,7 @@ export default function PlayPage() {
           icon={<Worm className="text-yellow-500" size={48} />}
           title="Snake"
           link="/play/snake"
-          description="Navigate your snake when every turn and movement is recorded on-chain."
+          description="Navigate your snake when every turn and movement is recorded onchain."
         />
 
         {/* Game Card - Guitar Hero */}
@@ -110,7 +110,7 @@ export default function PlayPage() {
           icon={<GuitarIcon className="text-purple-400" size={48} weight="fill" />}
           title="Guitar Hero"
           link="/play/guitar-hero"
-          description="Hit the right notes in rhythm while each note is verified on-chain."
+          description="Hit the right notes in rhythm while each note is put onchain."
         />
 
         {/* Game Card - Whack-a-Mole */}
@@ -118,7 +118,7 @@ export default function PlayPage() {
           icon={<HammerIcon className="text-orange-500" size={48} weight="fill" />}
           title="Whack-a-Mole"
           link="/play/whack-a-mole"
-          description="Test your reflexes to whack moles with every hit recorded on-chain."
+          description="Test your reflexes to whack moles with every hit recorded onchain."
         />
 
         {/* Game Card - Boxing */}
@@ -126,7 +126,7 @@ export default function PlayPage() {
           icon={<BoxingGloveIcon className="text-red-600" size={48} weight="fill" />}
           title="Boxing"
           link="/play/boxing"
-          description="Throw punches and dodge in this on-chain boxing simulation."
+          description="Throw punches and dodge in this onchain boxing simulation."
         />
       </section>
     </div>
