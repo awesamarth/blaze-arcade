@@ -16,7 +16,7 @@ export function LoginPrompt() {
     setMounted(true)
   }, [])
 
-  const isDark = mounted && resolvedTheme === 'dark'
+  const isLight = mounted && resolvedTheme === 'light'
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-6 text-center pt-12">
@@ -32,7 +32,7 @@ export function LoginPrompt() {
 
         {/* Title */}
         <h2 className="text-3xl md:text-4xl font-bold font-[family-name:var(--font-doom)]">
-          <span className={cn(isDark ? "text-white" : "text-black")}>READY TO</span>
+          <span className={cn(isLight ? "text-black" : "text-white")}>READY TO</span>
           <span className="text-purple-500 ml-2">PLAY?</span>
         </h2>
 

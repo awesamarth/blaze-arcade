@@ -127,3 +127,12 @@
     font-family: var(--font-rajdhani);
   }
 }
+
+@keyframes slideUp {
+  from {
+    transform: translateX(-50%) translateY(100%);
+  }
+  to {
+    transform: translateX(-50%) translateY(-50%);
+  }
+}
