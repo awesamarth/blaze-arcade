@@ -101,25 +101,12 @@ export default function GuitarHeroGame() {
                 const NOTE_SPEED = 200 // pixels per second
 
                 // Colors for lanes (RGBY)
-                const LANE_COLORS = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00] // Red, Green, Blue, Yellow
+                const LANE_COLORS = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00]
 
                 let NOTE_PATTERN: Array<{ lane: number, time: number }> = []
 
 
-                // Simple repeating note pattern
-                function generateRandomPattern(duration: number = 6, noteInterval: number = 0.5): Array<{ lane: number, time: number }> {
-                    const pattern = []
-                    const numNotes = Math.floor(duration / noteInterval)
 
-                    for (let i = 0; i < numNotes; i++) {
-                        pattern.push({
-                            lane: Math.floor(Math.random() * 4), // Random lane 0-3
-                            time: i * noteInterval
-                        })
-                    }
-
-                    return pattern
-                }
 
 
                 class GuitarHeroScene extends Phaser.Scene {
@@ -132,6 +119,12 @@ export default function GuitarHeroGame() {
                     startText: Phaser.GameObjects.Text | null = null
                     restartButton: Phaser.GameObjects.Text | null = null
                     pendingText: Phaser.GameObjects.Text | null = null
+                    currentNoteSpeed: number = 130
+                    successfulHits: number = 0
+                    lastNoteSpawnTime: number = 0
+                    lastLane: number = -1
+                    baseSpawnInterval: number = 1.0
+
 
                     gameStarted: boolean = false
                     gameOver: boolean = false
@@ -142,7 +135,6 @@ export default function GuitarHeroGame() {
                     constructor() {
                         super({ key: 'GuitarHeroScene' })
 
-                            NOTE_PATTERN = generateRandomPattern(6, 0.5)
 
                     }
 
@@ -378,26 +370,23 @@ export default function GuitarHeroGame() {
                         }
                     }
 
+                    // In the GuitarHeroScene class, replace the spawnNotes() method:
                     spawnNotes() {
-                        const currentLoopTime = this.patternTime % this.patternLoopDuration
+                        // Use the dynamic base interval that decreases with hits
+                        const variation = 0.4
+                        const lastSpawnTime = this.lastNoteSpawnTime || 0
 
-                        NOTE_PATTERN.forEach(noteData => {
-                            // Check if it's time to spawn this note in the current loop
-                            const timeSinceNoteTime = currentLoopTime - noteData.time
+                        if (this.patternTime - lastSpawnTime >= this.baseSpawnInterval + (Math.random() - 0.5) * variation) {
+                            // Ensure good lane distribution
+                            let lane
+                            do {
+                                lane = Math.floor(Math.random() * 4)
+                            } while (this.lastLane === lane && Math.random() < 0.6)
 
-                            // Spawn if we just passed the note time (within a small window)
-                            if (timeSinceNoteTime >= 0 && timeSinceNoteTime < 0.1) {
-                                // Check if we already spawned this note in this loop
-                                const noteExists = this.notes.some(note =>
-                                    note.lane === noteData.lane &&
-                                    Math.abs(note.sprite.y - (-NOTE_HEIGHT / 2)) < 50
-                                )
-
-                                if (!noteExists) {
-                                    this.createNote(noteData.lane)
-                                }
-                            }
-                        })
+                            this.createNote(lane)
+                            this.lastNoteSpawnTime = this.patternTime
+                            this.lastLane = lane
+                        }
                     }
 
                     createNote(lane: number) {
@@ -417,7 +406,7 @@ export default function GuitarHeroGame() {
                     }
 
                     updateNotes(delta: number) {
-                        const moveDistance = (NOTE_SPEED * delta) / 1000
+                        const moveDistance = (this.currentNoteSpeed * delta) / 1000 // Use currentNoteSpeed instead of NOTE_SPEED
 
                         for (let i = this.notes.length - 1; i >= 0; i--) {
                             const note = this.notes[i]
@@ -425,12 +414,17 @@ export default function GuitarHeroGame() {
 
                             // Check if note passed the hit zone (missed)
                             if (note.sprite.y > GAME_HEIGHT + NOTE_HEIGHT) {
-                                this.makeMistake(i, true) // true indicates it was a missed note
+                                this.makeMistake(i, true)
                             }
                         }
                     }
 
                     handleKeyPress(lane: number) {
+
+                        if (this.gameOver) {
+                            return; // Don't process any inputs if game is over
+                        }
+
                         if (!this.gameStarted) {
                             this.startGame()
                             return
@@ -467,6 +461,19 @@ export default function GuitarHeroGame() {
                     hitNote(noteIndex: number) {
                         const note = this.notes[noteIndex]
 
+                        // Remove the note immediately when hit (before transaction)
+                        note.sprite.destroy()
+                        this.notes.splice(noteIndex, 1)
+                        this.flashHitZone(note.lane)
+
+                        this.successfulHits++
+                        if (this.successfulHits % 5 === 0) {
+                            this.currentNoteSpeed *= 1.2
+                            this.baseSpawnInterval = Math.max(this.baseSpawnInterval * 0.95, 0.3) // Reduce by 5%, minimum 0.3s
+
+                            console.log(`Speed increased to: ${this.currentNoteSpeed.toFixed(1)}`)
+                        }
+
                         if (isWeb3Enabled && selectedNetwork.id !== 'select') {
                             // Set transaction pending
                             transactionPendingRef.current = true
@@ -475,7 +482,7 @@ export default function GuitarHeroGame() {
                             // Send blockchain transaction
                             sendUpdate(selectedNetwork.id)
                                 .then(() => {
-                                    // Transaction successful - register the hit
+                                    // Transaction successful - just update score
                                     setScore(prevScore => {
                                         const newScore = prevScore + 100
                                         // Update the in-game score text
@@ -485,15 +492,8 @@ export default function GuitarHeroGame() {
                                         return newScore
                                     })
 
-                                    // Remove the note
-                                    note.sprite.destroy()
-                                    this.notes.splice(noteIndex, 1)
-
                                     transactionPendingRef.current = false
                                     setShowToast(false)
-
-                                    // Flash the hit zone
-                                    this.flashHitZone(note.lane)
                                 })
                                 .catch((error) => {
                                     console.error('Transaction error:', error)
@@ -502,18 +502,14 @@ export default function GuitarHeroGame() {
                                     this.handleGameOver()
                                 })
                         } else {
-                            // Web3 disabled - immediate hit registration
+                            // Web3 disabled - immediate score update
                             setScore(prevScore => {
                                 const newScore = prevScore + 100
-                                // Update the in-game score text
                                 if (this.scoreText) {
                                     this.scoreText.setText(`Score: ${newScore}`)
                                 }
                                 return newScore
                             })
-                            note.sprite.destroy()
-                            this.notes.splice(noteIndex, 1)
-                            this.flashHitZone(note.lane)
                         }
                     }
 
@@ -537,7 +533,7 @@ export default function GuitarHeroGame() {
                         }
 
                         setMistakes(prevMistakes => {
-                            const newMistakes = prevMistakes + 1
+                            const newMistakes = Math.min(prevMistakes + 1, 10) // Cap at 10
                             // Update the in-game mistakes text
                             if (this.mistakesText) {
                                 this.mistakesText.setText(`Mistakes: ${newMistakes}/10`)
@@ -551,7 +547,6 @@ export default function GuitarHeroGame() {
                             return newMistakes
                         })
                     }
-
                     startGame() {
                         this.gameStarted = true
                         if (this.startText) {
@@ -579,6 +574,8 @@ export default function GuitarHeroGame() {
                     restartGame() {
                         this.gameOver = false
                         this.gameStarted = false
+                        this.currentNoteSpeed = 130
+                        this.successfulHits = 0
 
                         // Clear all notes
                         this.notes.forEach(note => note.sprite.destroy())
@@ -590,6 +587,11 @@ export default function GuitarHeroGame() {
                         this.patternTime = 0
                         this.nextNoteId = 0
 
+                        // Reset new random spawning properties
+                        this.lastNoteSpawnTime = 0
+                        this.lastLane = -1
+                        this.baseSpawnInterval = 1.0
+
                         // Update UI
                         if (this.scoreText) {
                             this.scoreText.setText('Score: 0')
@@ -598,7 +600,7 @@ export default function GuitarHeroGame() {
                             this.mistakesText.setText('Mistakes: 0/10')
                         }
 
-                        // Hide game over UI and show start text
+                        // Hide game over UI first, then show start text
                         if (this.gameOverText) {
                             this.gameOverText.setVisible(false)
                         }
@@ -606,9 +608,11 @@ export default function GuitarHeroGame() {
                             this.restartButton.setVisible(false)
                         }
 
+                        // Force update the start text with proper depth
                         this.updateStartText()
                         if (this.startText) {
                             this.startText.setVisible(true)
+                            this.startText.setDepth(300)
                         }
                     }
                 }
@@ -639,6 +643,12 @@ export default function GuitarHeroGame() {
             }
         }
     }, [isMounted, isWeb3Enabled, selectedNetwork.id])
+
+    useEffect(() => {
+        // Reset game state when Web3 setting or network changes
+        setScore(0)
+        setMistakes(0)
+    }, [isWeb3Enabled, selectedNetwork.id])
 
     const handleToggleWeb3 = (enabled: boolean) => {
         if (transactionPendingRef.current) return
@@ -683,7 +693,7 @@ export default function GuitarHeroGame() {
                     <div className="w-full max-w-4xl px-6 md:px-12 pt-24 mb-8">
                         <div className="flex items-center justify-between mb-4">
                             <h1 className="text-3xl md:text-4xl font-bold font-[family-name:var(--font-doom)]">
-                                <span className="text-purple-500">GUITAR</span>
+                                <span className={isDark ? "text-white" : "text-black"}>GUITAR</span>
                                 <span className="text-purple-400 ml-2">HERO</span>
                             </h1>
                             <div className="w-44 flex-shrink-0">
