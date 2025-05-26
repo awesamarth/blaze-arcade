@@ -116,10 +116,14 @@ export default function BoxingGame() {
                     gameOver: boolean = false
                     playerBlocks: number = 0
                     maxBlocks: number = 3
-                    aiAttackSpeed: number = 2000 // Base AI attack interval
+                    aiAttackSpeed: number = 4000 // Base AI attack interval
                     nextAiAttack: number = 0
                     telegraphTime: number = 500 // 500ms warning
                     showingTelegraph: boolean = false
+                    playerFlashTimer: Phaser.Time.TimerEvent | null = null
+                    aiFlashTimer: Phaser.Time.TimerEvent | null = null
+                    isCurrentlyBlocking: boolean = false
+                    blockTimer: Phaser.Time.TimerEvent | null = null
 
                     constructor() {
                         super({ key: 'BoxingScene' })
@@ -363,7 +367,7 @@ export default function BoxingGame() {
                             this.tweens.add({
                                 targets: this.playerGlove,
                                 x: this.playerGlove.x + 40,
-                                duration: 200,
+                                duration: 100,
                                 yoyo: true,
                                 ease: 'Power2',
                                 onComplete: () => {
@@ -379,7 +383,7 @@ export default function BoxingGame() {
                                 targets: this.playerGlove,
                                 rotation: 0, // Point up
                                 duration: 150,
-                                yoyo: true,
+                                // Remove yoyo: true so it stays in up position
                                 ease: 'Power2',
                                 onComplete: () => {
                                     this.playerAnimating = false;
@@ -394,7 +398,7 @@ export default function BoxingGame() {
                             this.tweens.add({
                                 targets: this.aiGlove,
                                 x: this.aiGlove.x - 40,
-                                duration: 200,
+                                duration: 100,
                                 yoyo: true,
                                 ease: 'Power2',
                                 onComplete: () => {
@@ -412,17 +416,16 @@ export default function BoxingGame() {
                     executeAiAttack() {
                         this.hideTelegraph()
 
-                        // Only animate if AI isn't already animating
                         if (!this.aiAnimating) {
                             this.animateAiPunch()
                         }
 
-                        // Check if player is blocking and not in transaction
-                        if (this.playerBlocks > 0 && !transactionPendingRef.current) {
+                        // Check if player is currently blocking (not stored blocks)
+                        if (this.isCurrentlyBlocking && !transactionPendingRef.current) {
                             // Player successfully blocked
-                            this.flashPlayer(0x00ff00) // Green flash for successful block
-                            this.playerBlocks--
-                            this.updateBlocksText()
+                            this.flashPlayer(0x00ff00)
+                            this.endBlockWindow() // End the block window after successful block
+                            // Don't decrement blocks here - they're consumed by the block window ending
                         } else {
                             // Player got hit
                             this.playerHit()
@@ -458,14 +461,47 @@ export default function BoxingGame() {
                         }
                     }
 
+                    startBlockWindow() {
+                        this.isCurrentlyBlocking = true
+                        this.playerBlocks++
+                        this.updateBlocksText()
+                        this.animatePlayerBlock() // This will rotate glove up
+
+                        // Clear existing block timer
+                        if (this.blockTimer) {
+                            this.blockTimer.remove()
+                        }
+
+                        // Set 500ms block window
+                        this.blockTimer = this.time.delayedCall(500, () => {
+                            this.endBlockWindow()
+                        })
+                    }
+
+                    endBlockWindow() {
+                        this.isCurrentlyBlocking = false
+                        this.blockTimer = null
+
+                        // Rotate glove back to original position
+                        if (this.playerGlove) {
+                            this.tweens.add({
+                                targets: this.playerGlove,
+                                rotation: Math.PI / 2, // Back to pointing right
+                                duration: 100,
+                                ease: 'Power2'
+                            })
+                        }
+                    }
+
                     handlePlayerBlock() {
                         if (!this.gameStarted) {
                             this.startGame()
                             return
                         }
 
-                        if (this.playerBlocks >= this.maxBlocks) {
-                            return // Can't block anymore
+                        // Don't allow blocking if already blocking or at max blocks
+                        if (this.isCurrentlyBlocking || this.playerBlocks >= this.maxBlocks) {
+                            return
                         }
 
                         if (isWeb3Enabled && selectedNetwork.id !== 'select') {
@@ -475,10 +511,8 @@ export default function BoxingGame() {
                             sendUpdate(selectedNetwork.id)
                                 .then(() => {
                                     // Block successful
-                                    this.playerBlocks++
-                                    this.updateBlocksText()
                                     this.flashPlayer(0x0066ff) // Blue flash for block
-                                    this.animatePlayerBlock()
+                                    this.startBlockWindow() // This handles the increment and animation
                                     transactionPendingRef.current = false
                                     setShowToast(false)
                                 })
@@ -490,10 +524,8 @@ export default function BoxingGame() {
                                 })
                         } else {
                             // Web3 disabled - immediate block
-                            this.playerBlocks++
-                            this.updateBlocksText()
                             this.flashPlayer(0x0066ff)
-                            this.animatePlayerBlock()
+                            this.startBlockWindow() // This handles the increment and animation
                         }
                     }
 
@@ -510,7 +542,7 @@ export default function BoxingGame() {
                             }
 
                             // Make AI more aggressive
-                            this.aiAttackSpeed = Math.max(800, this.aiAttackSpeed - 100)
+                            this.aiAttackSpeed = Math.max(1200, this.aiAttackSpeed - 50)
 
                             return newScore
                         })
@@ -539,26 +571,38 @@ export default function BoxingGame() {
 
                     flashPlayer(color: number) {
                         if (this.player) {
-                            const originalColor = this.player.fillColor
+                            const originalColor = 0x0066ff // Store the actual blue color instead of reading fillColor
                             this.player.setFillStyle(color)
 
-                            this.time.delayedCall(200, () => {
+                            // Clear any existing flash timers first
+                            if (this.playerFlashTimer) {
+                                this.playerFlashTimer.remove()
+                            }
+
+                            this.playerFlashTimer = this.time.delayedCall(200, () => {
                                 if (this.player) {
                                     this.player.setFillStyle(originalColor)
                                 }
+                                this.playerFlashTimer = null
                             })
                         }
                     }
 
                     flashAI(color: number) {
                         if (this.ai) {
-                            const originalColor = this.ai.fillColor
+                            const originalColor = 0xff0000 // Store the actual red color instead of reading fillColor
                             this.ai.setFillStyle(color)
 
-                            this.time.delayedCall(200, () => {
+                            // Clear any existing flash timers first
+                            if (this.aiFlashTimer) {
+                                this.aiFlashTimer.remove()
+                            }
+
+                            this.aiFlashTimer = this.time.delayedCall(200, () => {
                                 if (this.ai) {
                                     this.ai.setFillStyle(originalColor)
                                 }
+                                this.aiFlashTimer = null
                             })
                         }
                     }
@@ -609,8 +653,14 @@ export default function BoxingGame() {
                         this.gameOver = false
                         this.gameStarted = false
                         this.playerBlocks = 0
-                        this.aiAttackSpeed = 2000
+                        this.aiAttackSpeed = 4000
                         this.showingTelegraph = false
+
+                        this.isCurrentlyBlocking = false
+                        if (this.blockTimer) {
+                            this.blockTimer.remove()
+                            this.blockTimer = null
+                        }
 
                         // Reset game state
                         setScore(0)
@@ -717,8 +767,7 @@ export default function BoxingGame() {
                     <div className="w-full max-w-4xl px-6 md:px-12 pt-24 mb-8">
                         <div className="flex items-center justify-between mb-4">
                             <h1 className="text-3xl md:text-4xl font-bold font-[family-name:var(--font-doom)]">
-                                <span className={isDark ? "text-white" : "text-black"}>BOXING</span>
-                                <span className="text-red-600 ml-2">RING</span>
+                                <span className="text-red-600 ">BOXING</span>
                             </h1>
                             <div className="w-44 flex-shrink-0">
                                 <NetworkSelector

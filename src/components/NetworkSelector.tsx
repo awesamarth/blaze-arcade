@@ -98,33 +98,33 @@ export function NetworkSelector({
   return (
     <div className="flex flex-col w-full">
       <div className="flex items-center justify-between mb-2">
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggleWeb3(!isWeb3Enabled)
-            if (!isWeb3Enabled) {
-              setIsDropdownOpen(false)
-            }
-          }}
-          className={cn(
-            "px-2 py-2 rounded-md text-sm flex items-center gap-1.5 hover:cursor-pointer transition-colors w-full justify-center",
-            isWeb3Enabled
-              ? "bg-green-500/10 text-green-500 hover:bg-green-500/20"
-              : "bg-red-500/10 text-red-500 hover:bg-red-500/20"
-          )}
-        >
-          {isWeb3Enabled ? (
-            <>
-              <Wifi size={14} />
-              <span>Web3 On</span>
-            </>
-          ) : (
-            <>
-              <WifiOff size={14} />
-              <span>Web3 Off</span>
-            </>
-          )}
-        </button>
+<button
+  onClick={(e) => {
+    e.stopPropagation()
+    onToggleWeb3(!isWeb3Enabled)
+    if (!isWeb3Enabled) {
+      setIsDropdownOpen(false)
+    }
+  }}
+  className={cn(
+    "px-4 py-3 rounded-lg text-base font-medium flex items-center gap-2 hover:cursor-pointer transition-all w-full justify-center shadow-md hover:shadow-lg",
+    isWeb3Enabled
+      ? "bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 shadow-green-500/20"
+      : "bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 shadow-red-500/20"
+  )}
+>
+  {isWeb3Enabled ? (
+    <>
+      <Wifi size={22} />
+      <span>Web3 On</span>
+    </>
+  ) : (
+    <>
+      <WifiOff size={22} />
+      <span>Web3 Off</span>
+    </>
+  )}
+</button>
       </div>
       
       {isWeb3Enabled && (
