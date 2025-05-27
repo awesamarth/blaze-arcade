@@ -94,8 +94,8 @@ export default function BoxingGame() {
                 // Game constants
                 const GAME_WIDTH = 800
                 const GAME_HEIGHT = 600
-                const PLAYER_SIZE = 80
-                const AI_SIZE = 80
+                const PLAYER_SIZE = 65
+                const AI_SIZE = 65
 
                 class BoxingScene extends Phaser.Scene {
                     player: Phaser.GameObjects.Rectangle | null = null
@@ -107,7 +107,6 @@ export default function BoxingGame() {
                     gameOverText: Phaser.GameObjects.Text | null = null
                     startText: Phaser.GameObjects.Text | null = null
                     restartButton: Phaser.GameObjects.Text | null = null
-                    telegraphIndicator: Phaser.GameObjects.Rectangle | null = null
                     playerGlove: Phaser.GameObjects.Text | null = null
                     aiGlove: Phaser.GameObjects.Text | null = null
                     playerAnimating: boolean = false
@@ -118,12 +117,16 @@ export default function BoxingGame() {
                     maxBlocks: number = 3
                     aiAttackSpeed: number = 4000 // Base AI attack interval
                     nextAiAttack: number = 0
-                    telegraphTime: number = 500 // 500ms warning
+                    telegraphTime: number = 1000 // 500ms warning
                     showingTelegraph: boolean = false
                     playerFlashTimer: Phaser.Time.TimerEvent | null = null
                     aiFlashTimer: Phaser.Time.TimerEvent | null = null
                     isCurrentlyBlocking: boolean = false
                     blockTimer: Phaser.Time.TimerEvent | null = null
+                    playerHead: Phaser.GameObjects.Arc | null = null
+                    aiHead: Phaser.GameObjects.Arc | null = null
+                    gameOverContainer: Phaser.GameObjects.Rectangle | null = null
+
 
                     constructor() {
                         super({ key: 'BoxingScene' })
@@ -149,58 +152,115 @@ export default function BoxingGame() {
                     }
 
                     createCharacters() {
-                        // Player (left side)
+                        // Create boxing ring first (so it's behind the fighters)
+
+                        // Ring floor/canvas
+                        this.add.rectangle(
+                            GAME_WIDTH / 2,
+                            GAME_HEIGHT / 2 + 80, // Lower part of screen
+                            GAME_WIDTH - 100,
+                            200,
+                            0x444444 // Dark gray canvas
+                        )
+
+                        // Ring ropes (3 horizontal lines)
+                        const ropeColor = 0xffffff // White ropes
+                        const ropeThickness = 4
+
+                        // Top rope
+                        this.add.rectangle(
+                            GAME_WIDTH / 2,
+                            GAME_HEIGHT / 2 - 80,
+                            GAME_WIDTH - 80,
+                            ropeThickness,
+                            ropeColor
+                        )
+
+                        // Middle rope
+                        this.add.rectangle(
+                            GAME_WIDTH / 2,
+                            GAME_HEIGHT / 2 - 40,
+                            GAME_WIDTH - 80,
+                            ropeThickness,
+                            ropeColor
+                        )
+
+                        // Bottom rope
+                        this.add.rectangle(
+                            GAME_WIDTH / 2,
+                            GAME_HEIGHT / 2,
+                            GAME_WIDTH - 80,
+                            ropeThickness,
+                            ropeColor
+                        )
+
+                        // Corner posts (4 vertical posts)
+                        const postWidth = 8
+                        const postHeight = 120
+                        const postColor = 0x666666 // Gray posts
+
+                        // Left posts
+                        this.add.rectangle(60, GAME_HEIGHT / 2 - 40, postWidth, postHeight, postColor)
+                        this.add.rectangle(GAME_WIDTH - 60, GAME_HEIGHT / 2 - 40, postWidth, postHeight, postColor)
+
+                        // Player (left side) - move much closer to center
                         this.player = this.add.rectangle(
-                            GAME_WIDTH / 4,
+                            GAME_WIDTH / 2 - 80,  // Much closer to center
                             GAME_HEIGHT / 2,
                             PLAYER_SIZE,
-                            PLAYER_SIZE * 1.5,
+                            PLAYER_SIZE * 1.75,
                             0x0066ff // Blue
                         )
 
-                        this.playerGlove = this.add.text(
-                            GAME_WIDTH / 4 + 60,
-                            GAME_HEIGHT / 2 - 20,
-                            '🥊',
-                            { fontSize: '32px' }
-                        ).setOrigin(0.5).setRotation(Math.PI / 2) // 90° pointing down
+                        this.playerHead = this.add.circle(
+                            GAME_WIDTH / 2 - 80,  // Match player position
+                            GAME_HEIGHT / 2 - (PLAYER_SIZE * 1.75) / 2 - 30,
+                            25,
+                            0xffffff
+                        )
 
-                        this.aiGlove = this.add.text(
-                            (GAME_WIDTH * 3) / 4 - 60,  // Change from -60 to -30
+                        this.playerGlove = this.add.text(
+                            GAME_WIDTH / 2 - 30,  // Position so punch reaches into AI's space
                             GAME_HEIGHT / 2 - 20,
                             '🥊',
                             { fontSize: '32px' }
-                        ).setOrigin(0.5).setRotation(-Math.PI / 2)
+                        ).setOrigin(0.5).setRotation(Math.PI / 2).setTint(0x99ccff).setDepth(10) // Even lighter blue
+                        // Lighter blue tint!
 
                         // Player transaction overlay (hidden initially)
                         this.playerOverlay = this.add.rectangle(
-                            GAME_WIDTH / 4,
+                            GAME_WIDTH / 2 - 80,  // Match player position
                             GAME_HEIGHT / 2,
                             PLAYER_SIZE,
-                            PLAYER_SIZE * 1.5,
+                            PLAYER_SIZE * 1.75,
                             0x000000,
                             0.5
                         ).setVisible(false)
 
-                        // AI (right side)
+                        // AI (right side) - move much closer to center
                         this.ai = this.add.rectangle(
-                            (GAME_WIDTH * 3) / 4,
+                            GAME_WIDTH / 2 + 80,  // Much closer to center
                             GAME_HEIGHT / 2,
                             AI_SIZE,
-                            AI_SIZE * 1.5,
+                            AI_SIZE * 1.75,
                             0xff0000 // Red
                         )
 
+                        this.aiHead = this.add.circle(
+                            GAME_WIDTH / 2 + 80,  // Match AI position
+                            GAME_HEIGHT / 2 - (AI_SIZE * 1.75) / 2 - 30,
+                            25,
+                            0xffffff
+                        )
+
+                        this.aiGlove = this.add.text(
+                            GAME_WIDTH / 2 + 30,  // Position so punch reaches into player's space
+                            GAME_HEIGHT / 2 - 20,
+                            '🥊',
+                            { fontSize: '32px' }
+                        ).setOrigin(0.5).setRotation(-Math.PI / 2).setDepth(5)
 
 
-                        // Telegraph indicator (hidden initially)
-                        this.telegraphIndicator = this.add.rectangle(
-                            (GAME_WIDTH * 3) / 4,
-                            GAME_HEIGHT / 2 - 100,
-                            60,
-                            20,
-                            0xffff00 // Yellow warning
-                        ).setVisible(false)
                     }
 
                     createUI() {
@@ -230,6 +290,16 @@ export default function BoxingGame() {
                             backgroundColor: '#000000',
                             padding: { x: 5, y: 2 }
                         }).setDepth(100)
+
+                        // Game over black background container
+                        this.gameOverContainer = this.add.rectangle(
+                            GAME_WIDTH / 2,
+                            GAME_HEIGHT / 2,
+                            400,
+                            200,
+                            0x000000,
+                            0.8 // Semi-transparent black
+                        ).setOrigin(0.5).setVisible(false).setDepth(150)
 
                         // Game over text
                         this.gameOverText = this.add.text(
@@ -266,20 +336,40 @@ export default function BoxingGame() {
                     setupControls() {
                         if (!this.input.keyboard) return;
 
-                        // Attack key (SPACE)
-                        const spaceKey = this.input.keyboard.addKey('SPACE');
-                        spaceKey.on('down', () => {
-                            if (!isInitializingRef.current && !transactionPendingRef.current && !this.playerAnimating) {
+                        // Attack keys (ENTER)
+                        const enterKey = this.input.keyboard.addKey('ENTER');
+                        enterKey.on('down', () => {
+                            if (!isInitializingRef.current && !transactionPendingRef.current && !this.playerAnimating && !this.isCurrentlyBlocking) {
                                 this.handlePlayerAttack();
                             }
                         });
 
-                        // Block key (SHIFT)
-                        const shiftKey = this.input.keyboard.addKey('SHIFT');
-                        shiftKey.on('down', () => {
+                        // Block keys (SPACE)
+                        const spaceKey = this.input.keyboard.addKey('SPACE');
+                        spaceKey.on('down', () => {
                             if (!isInitializingRef.current && !transactionPendingRef.current && !this.playerAnimating) {
                                 this.handlePlayerBlock();
                             }
+                        });
+
+                        // Mouse controls
+                        this.input.on('pointerdown', (pointer: any) => {
+                            if (pointer.leftButtonDown()) {
+                                // Left click = Attack
+                                if (!isInitializingRef.current && !transactionPendingRef.current && !this.playerAnimating && !this.isCurrentlyBlocking) {
+                                    this.handlePlayerAttack();
+                                }
+                            } else if (pointer.rightButtonDown()) {
+                                // Right click = Block
+                                if (!isInitializingRef.current && !transactionPendingRef.current && !this.playerAnimating) {
+                                    this.handlePlayerBlock();
+                                }
+                            }
+                        });
+
+                        // Prevent right-click context menu
+                        this.game.canvas.addEventListener('contextmenu', (e) => {
+                            e.preventDefault();
                         });
                     }
 
@@ -295,20 +385,25 @@ export default function BoxingGame() {
                                 'Initializing...',
                                 {
                                     fontFamily: 'sans-serif',
-                                    fontSize: '20px',
-                                    color: '#9CA3AF',
+                                    fontSize: '18px',
+                                    color: '#9CA3AF', // Gray color
                                     backgroundColor: '#000000',
                                     padding: { x: 10, y: 5 }
                                 }
                             ).setOrigin(0.5).setDepth(100)
                         } else {
+                            // Check if Web3 is enabled to show transaction warning
+                            const baseText = 'ENTER/Left Click to Attack, SPACE/Right Click to Block\nMax 3 blocks - punch to recharge blocks'
+                            const web3Warning = isWeb3Enabled && selectedNetwork.id !== 'select' ? '\nNo actions possible during pending transactions!' : ''
+                            const startPrompt = '\nPress any key to start!'
+
                             this.startText = this.add.text(
                                 GAME_WIDTH / 2,
                                 GAME_HEIGHT / 2,
-                                'SPACE to Attack, SHIFT to Block\nPress any key to start!',
+                                baseText + web3Warning + startPrompt,
                                 {
                                     fontFamily: 'sans-serif',
-                                    fontSize: '20px',
+                                    fontSize: '16px', // Smaller to fit more text
                                     color: '#00ff00',
                                     backgroundColor: '#000000',
                                     padding: { x: 10, y: 5 },
@@ -340,24 +435,23 @@ export default function BoxingGame() {
                     }
 
                     showTelegraph() {
-                        if (this.telegraphIndicator) {
-                            this.telegraphIndicator.setVisible(true)
-
-                            // Flash the indicator
+                        if (this.aiHead) {
+                            // Flash the AI head yellow
                             this.tweens.add({
-                                targets: this.telegraphIndicator,
-                                alpha: { from: 1, to: 0.3 },
-                                duration: 100,
+                                targets: this.aiHead,
+                                fillColor: { from: 0xff0000, to: 0xffff00 }, // Red to yellow
+                                duration: 150,
                                 yoyo: true,
-                                repeat: 4
+                                repeat: -1 // Repeat infinitely until hidden
                             })
                         }
                     }
 
                     hideTelegraph() {
-                        if (this.telegraphIndicator) {
-                            this.telegraphIndicator.setVisible(false)
-                            this.telegraphIndicator.setAlpha(1)
+                        if (this.aiHead) {
+                            // Stop all tweens on the AI head and reset to red
+                            this.tweens.killTweensOf(this.aiHead)
+                            this.aiHead.setFillStyle(0xffffff) // Reset to white instead of red
                         }
                     }
 
@@ -366,7 +460,7 @@ export default function BoxingGame() {
                             this.playerAnimating = true;
                             this.tweens.add({
                                 targets: this.playerGlove,
-                                x: this.playerGlove.x + 40,
+                                x: this.playerGlove.x + 60,
                                 duration: 100,
                                 yoyo: true,
                                 ease: 'Power2',
@@ -397,7 +491,7 @@ export default function BoxingGame() {
                             this.aiAnimating = true;
                             this.tweens.add({
                                 targets: this.aiGlove,
-                                x: this.aiGlove.x - 40,
+                                x: this.aiGlove.x - 60,
                                 duration: 100,
                                 yoyo: true,
                                 ease: 'Power2',
@@ -433,8 +527,11 @@ export default function BoxingGame() {
                     }
 
                     handlePlayerAttack() {
-                        if (!this.gameStarted) {
+                        if (!this.gameStarted || this.gameOver) {
                             this.startGame()
+                            return
+                        }
+                        if (this.isCurrentlyBlocking) {
                             return
                         }
 
@@ -473,7 +570,7 @@ export default function BoxingGame() {
                         }
 
                         // Set 500ms block window
-                        this.blockTimer = this.time.delayedCall(500, () => {
+                        this.blockTimer = this.time.delayedCall(700, () => {
                             this.endBlockWindow()
                         })
                     }
@@ -494,7 +591,7 @@ export default function BoxingGame() {
                     }
 
                     handlePlayerBlock() {
-                        if (!this.gameStarted) {
+                        if (!this.gameStarted || this.gameOver) {
                             this.startGame()
                             return
                         }
@@ -542,7 +639,10 @@ export default function BoxingGame() {
                             }
 
                             // Make AI more aggressive
-                            this.aiAttackSpeed = Math.max(1200, this.aiAttackSpeed - 50)
+                            this.aiAttackSpeed = Math.max(1500, this.aiAttackSpeed - 30)
+
+                            // Reduce telegraph warning time (less time to react!)
+                            this.telegraphTime = Math.max(900, this.telegraphTime - 10)
 
                             return newScore
                         })
@@ -568,13 +668,15 @@ export default function BoxingGame() {
                             return newLives
                         })
                     }
-
                     flashPlayer(color: number) {
                         if (this.player) {
-                            const originalColor = 0x0066ff // Store the actual blue color instead of reading fillColor
-                            this.player.setFillStyle(color)
+                            const originalColor = 0x0066ff // Original blue
 
-                            // Clear any existing flash timers first
+                            // If it's a hit (red), use light blue instead
+                            const flashColor = color === 0xff0000 ? 0x66b3ff : color // Light blue for hits, keep original color for blocks
+
+                            this.player.setFillStyle(flashColor)
+
                             if (this.playerFlashTimer) {
                                 this.playerFlashTimer.remove()
                             }
@@ -628,16 +730,19 @@ export default function BoxingGame() {
                         if (this.startText) {
                             this.startText.setVisible(false)
                         }
-                        this.scheduleNextAiAttack()
+                        const firstAttackDelay = Phaser.Math.Between(1000, 2000) // 1-2 seconds
+                        this.nextAiAttack = this.time.now + firstAttackDelay
                     }
 
                     handleGameOver() {
                         this.gameOver = true
 
+                        if (this.gameOverContainer) {
+                            this.gameOverContainer.setVisible(true)
+                        }
                         if (this.gameOverText) {
                             this.gameOverText.setVisible(true)
                         }
-
                         if (this.restartButton) {
                             this.restartButton.setVisible(true)
                         }
@@ -653,7 +758,9 @@ export default function BoxingGame() {
                         this.gameOver = false
                         this.gameStarted = false
                         this.playerBlocks = 0
-                        this.aiAttackSpeed = 4000
+                        this.aiAttackSpeed = 5000
+                        this.telegraphTime = 1500 // Reset telegraph time
+
                         this.showingTelegraph = false
 
                         this.isCurrentlyBlocking = false
@@ -675,7 +782,9 @@ export default function BoxingGame() {
                         }
                         this.updateBlocksText()
 
-                        // Hide game over UI
+                        if (this.gameOverContainer) {
+                            this.gameOverContainer.setVisible(false)
+                        }
                         if (this.gameOverText) {
                             this.gameOverText.setVisible(false)
                         }
@@ -782,7 +891,7 @@ export default function BoxingGame() {
                         {!(isWeb3Enabled && selectedNetwork.id === 'select') && (
                             <div className="flex items-center gap-2 mb-6">
                                 <p className="text-lg font-rajdhani">
-                                    SPACE to attack, SHIFT to block - {isWeb3Enabled ? `every action is recorded on ${selectedNetwork.name} Testnet` : 'Web3 mode is disabled'}
+                                    ENTER/Left Click to attack, SPACE/Right Click to block - {isWeb3Enabled ? `every action is recorded on ${selectedNetwork.name} Testnet` : 'Web3 mode is disabled'}
                                 </p>
                             </div>
                         )}
@@ -817,11 +926,11 @@ export default function BoxingGame() {
                                 {/* Controls display */}
                                 <div className="flex justify-center gap-4 mb-4">
                                     <div className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 border border-blue-500/50 rounded">
-                                        <span className="font-mono font-bold">SPACE</span>
+                                        <span className="font-mono font-bold">ENTER / Left Click</span>
                                         <span>Attack</span>
                                     </div>
                                     <div className="flex items-center gap-2 px-4 py-2 bg-green-500/20 border border-green-500/50 rounded">
-                                        <span className="font-mono font-bold">SHIFT</span>
+                                        <span className="font-mono font-bold">SPACE / Right Click</span>
                                         <span>Block</span>
                                     </div>
                                 </div>
@@ -831,9 +940,9 @@ export default function BoxingGame() {
                                     <h3 className="font-medium mb-2">How to Play:</h3>
                                     <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
                                         <li>You (blue fighter) vs AI (red fighter)</li>
-                                        <li>Press SPACE to attack, SHIFT to block</li>
-                                        <li>Yellow warning appears 500ms before AI attacks</li>
-                                        <li>Max 3 blocks in a row - you must attack to reset your blocks</li>
+                                        <li>Press ENTER/Left Click to attack, SPACE/Right Click to block</li>
+                                        <li>Yellow warning appears 1 second (1000ms) before AI attacks</li>
+                                        <li>Max 3 blocks in a row - you must attack to recharge your blocks</li>
                                         <li>Each successful attack gives you 1 point and makes AI faster</li>
                                         <li>You have 5 lives - AI hits reduce your lives</li>
                                         {isWeb3Enabled && <li className="text-orange-400">Dark overlay on your character = transaction pending, no actions possible!</li>}

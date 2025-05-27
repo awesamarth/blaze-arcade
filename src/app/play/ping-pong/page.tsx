@@ -64,6 +64,8 @@ export default function PingPongGame() {
 
   // Initialize blockchain for the selected network
   useEffect(() => {
+
+    setScore({ player: 0 })
     const initializeNetwork = async () => {
       if (isWeb3Enabled && selectedNetwork && selectedNetwork.id !== 'select' && embeddedWallet?.address) {
         setIsInitializing(true)
@@ -396,7 +398,6 @@ export default function PingPongGame() {
               padding: { x: 30, y: 15 }
             }).setOrigin(0.5).setInteractive().setVisible(false)
 
-            // Bind resetGame to this scene context
             // Bind resetGame to this scene context
             this.resetGame = function () {
               // Reset game state
