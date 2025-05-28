@@ -17,7 +17,7 @@ const CHAIN_CONFIGS = {
    chain: riseTestnet,
    contractAddress: RISE_UPDATER_ADDRESS,
    chainId: 11155931,
-   transport: () => webSocket('wss://testnet.riselabs.xyz/ws') // WebSocket for Rise
+   transport: () => http('https://testnet.riselabs.xyz/') // Rise
  },
  somnia: {
    chain: somniaTestnet,

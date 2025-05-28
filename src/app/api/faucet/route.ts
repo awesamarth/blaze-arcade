@@ -23,7 +23,7 @@ const somniaClient = createWalletClient({
 const riseClient = createWalletClient({
   account, 
   chain:riseTestnet,
-  transport: webSocket()
+  transport: http()
 }).extend(publicActions)
 
 export async function POST(request: NextRequest) {
