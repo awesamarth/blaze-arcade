@@ -1,4 +1,4 @@
-import { foundry, mainnet, megaethTestnet, sepolia, somniaTestnet } from 'viem/chains';
+import { foundry, mainnet, megaethTestnet, sepolia, somniaTestnet, abstractTestnet } from 'viem/chains';
 import { http, webSocket } from 'wagmi';
 import { defineChain } from 'viem'
 
@@ -34,12 +34,13 @@ export const riseTestnet = defineChain({
 // Replace these with your app's chains
 
 export const wagmiConfig = createConfig({
-  chains: [foundry, megaethTestnet, somniaTestnet, riseTestnet],
+  chains: [foundry, megaethTestnet, somniaTestnet, riseTestnet, abstractTestnet],
   transports: {
     [megaethTestnet.id]: http(),
     [foundry.id]: http(),
     [somniaTestnet.id]: http(),
-    [riseTestnet.id]: http()
+    [riseTestnet.id]: http(),
+    [abstractTestnet.id]:http()
     
 
   },

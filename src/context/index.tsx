@@ -5,7 +5,7 @@ import { useTheme } from 'next-themes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {WagmiProvider} from '@privy-io/wagmi';
 import { riseTestnet, wagmiConfig } from '@/wagmi-config';
-import { foundry, megaethTestnet, somniaTestnet } from 'viem/chains';
+import { foundry, megaethTestnet, somniaTestnet, abstractTestnet } from 'viem/chains';
 
 
 export default function Providers({ children }: { children: React.ReactNode }) {
@@ -21,7 +21,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           createOnLogin: 'all-users',
         },
         defaultChain: megaethTestnet,
-        supportedChains: [megaethTestnet, foundry, somniaTestnet, riseTestnet],
+        supportedChains: [megaethTestnet, foundry, somniaTestnet, riseTestnet, abstractTestnet],
         appearance: {
           theme: ('dark' as "dark" | "light" | `#${string}` | undefined)
         }

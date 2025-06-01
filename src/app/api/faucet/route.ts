@@ -1,9 +1,10 @@
-import { FAUCET_ABI, MEGA_FAUCET_ADDRESS, RISE_FAUCET_ADDRESS, SOMNIA_FAUCET_ADDRESS } from '@/constants';
+import { FAUCET_ABI, MEGA_FAUCET_ADDRESS, RISE_FAUCET_ADDRESS, SOMNIA_FAUCET_ADDRESS, ABSTRACT_FAUCET_ADDRESS } from '@/constants';
 import { NextRequest, NextResponse } from 'next/server';
 import { createWalletClient, http, publicActions, webSocket } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { megaethTestnet, somniaTestnet } from 'viem/chains';
+import { abstractTestnet, megaethTestnet, somniaTestnet } from 'viem/chains';
 import { riseTestnet } from '@/wagmi-config';
+import { eip712WalletActions } from 'viem/zksync';
 
 
 const account = privateKeyToAccount(process.env.DEV_PRIVATE_KEY! as `0x${string}`)
@@ -16,15 +17,21 @@ const megaClient = createWalletClient({
 
 const somniaClient = createWalletClient({
   account,
-  chain:somniaTestnet,
-  transport:http()
+  chain: somniaTestnet,
+  transport: http()
 }).extend(publicActions)
 
 const riseClient = createWalletClient({
-  account, 
-  chain:riseTestnet,
+  account,
+  chain: riseTestnet,
   transport: http()
 }).extend(publicActions)
+
+const abstractClient = createWalletClient({
+  account,
+  chain: abstractTestnet,
+  transport: http()
+}).extend(publicActions).extend(eip712WalletActions())
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,7 +40,7 @@ export async function POST(request: NextRequest) {
     console.log(`Faucet request for address ${address} on chain ${chain}`);
 
     if (chain === "megaeth") {
-     const hash= await megaClient.writeContract({
+      const hash = await megaClient.writeContract({
         address: MEGA_FAUCET_ADDRESS,
         abi: FAUCET_ABI,
         functionName: 'drip',
@@ -44,8 +51,8 @@ export async function POST(request: NextRequest) {
       console.log('MegaETH faucet transaction mined:', receipt.transactionHash);
 
     }
-    
-    else if (chain === "somnia"){
+
+    else if (chain === "somnia") {
       const hash = await somniaClient.writeContract({
         address: SOMNIA_FAUCET_ADDRESS,
         abi: FAUCET_ABI,
@@ -58,7 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     else if (chain === "rise") {
-     const hash= await riseClient.writeContract({
+      const hash = await riseClient.writeContract({
         address: RISE_FAUCET_ADDRESS,
         abi: FAUCET_ABI,
         functionName: 'drip',
@@ -70,9 +77,22 @@ export async function POST(request: NextRequest) {
 
     }
 
+    else if (chain === "abstract") {
+      const hash = await abstractClient.writeContract({
+        address: ABSTRACT_FAUCET_ADDRESS,
+        abi: FAUCET_ABI,
+        functionName: 'drip',
+        args: [address],
+      })
+
+      const receipt = await abstractClient.waitForTransactionReceipt({ hash });
+      console.log('Abstract faucet transaction mined:', receipt.transactionHash);
+
+    }
 
 
-    return NextResponse.json({ data: "done" }, {status:200});
+
+    return NextResponse.json({ data: "done" }, { status: 200 });
   } catch (error) {
     console.error('Faucet API error:', error);
     return NextResponse.json({ error: 'Failed to process faucet request' }, { status: 500 });
