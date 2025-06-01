@@ -3,6 +3,7 @@ import { useWallets } from "@privy-io/react-auth";
 import { createWalletClient, custom, Hex, http, publicActions, webSocket } from "viem";
 import { foundry, megaethTestnet, somniaTestnet, abstractTestnet } from "viem/chains";
 import { riseTestnet } from "@/wagmi-config";
+import { eip712WalletActions } from 'viem/zksync'
 import { UPDATER_ABI, LOCAL_UPDATER_ADDRESS, MEGA_UPDATER_ADDRESS, RISE_UPDATER_ADDRESS, SOMNIA_UPDATER_ADDRESS, ABSTRACT_UPDATER_ADDRESS } from '@/constants';
 
 // Chain configurations
@@ -34,7 +35,7 @@ const CHAIN_CONFIGS = {
   },
   abstract: {  // Add this new entry
     chain: abstractTestnet,
-    contractAddress: ABSTRACT_UPDATER_ADDRESS, 
+    contractAddress: ABSTRACT_UPDATER_ADDRESS,
     chainId: 11124,
     transport: () => http('https://api.testnet.abs.xyz')
   }
@@ -110,11 +111,18 @@ export function useBlockchainUtils() {
 
     const provider = await embeddedWallet.getEthereumProvider();
 
-    return createWalletClient({
+    const baseClient = createWalletClient({
       account: embeddedWallet.address as Hex,
       chain: config.chain,
       transport: custom(provider),
     }).extend(publicActions);
+
+    if (chainKey === 'abstract') {
+      return baseClient.extend(eip712WalletActions());
+    }
+
+    return baseClient;
+
   };
 
   // Switch to a specific chain
@@ -177,6 +185,7 @@ export function useBlockchainUtils() {
     if (!embeddedWallet) return;
     console.log("start nonce: ", startNonce)
     console.log("batch size: ", batchSize)
+
     // Use cached client instead of creating new one
     const client = clientCache[chainKey];
     if (!client) {
@@ -197,7 +206,7 @@ export function useBlockchainUtils() {
         maxPriorityFeePerGas: gas.maxPriorityFeePerGas,
         value: 0n,
         type: 'eip1559' as const,
-        gas: 100000n  // Add explicit gas limit (100k should be enough for simple contract call)
+        gas: chainKey === 'abstract' ? 200000n : 100000n,
       };
 
       //@ts-ignore
@@ -216,7 +225,6 @@ export function useBlockchainUtils() {
     console.log(`Pre-signed ${batchSize} transactions for ${chainKey}`);
   };
 
-  // Extend the pool instead of replacing it
   // Extend the pool instead of replacing it
   const extendPool = async (chainKey: string, startNonce: number, batchSize: number) => {
     if (!embeddedWallet) return;
@@ -240,7 +248,7 @@ export function useBlockchainUtils() {
         maxPriorityFeePerGas: gas.maxPriorityFeePerGas,
         value: 0n,
         type: 'eip1559' as const,
-        gas: 100000n
+        gas: chainKey === 'abstract' ? 200000n : 100000n
       };
 
       //@ts-ignore
@@ -291,6 +299,8 @@ export function useBlockchainUtils() {
       return await sendMegaethTransaction(startTime);
     } else if (chainKey === 'rise') {
       return await sendRiseTransaction(startTime);
+    } else if (chainKey === 'abstract') {
+      return await sendAbstractTransaction(startTime); // Use new detailed endpoint
     } else {
       return await sendRegularTransaction(chainKey, startTime);
     }
@@ -320,6 +330,21 @@ export function useBlockchainUtils() {
     await client.request({
       //@ts-ignore
       method: 'eth_sendRawTransactionSync',
+      params: [signedTx]
+    });
+
+    return performance.now() - startTime;
+  };
+
+  // Abstract: use zks_sendRawTransactionWithDetailedOutput
+  const sendAbstractTransaction = async (startTime: number): Promise<number> => {
+    // Use cached client
+    const client = clientCache['abstract'] || await createChainClient('abstract');
+    const signedTx = getNextTransaction('abstract');
+
+    await client.request({
+      //@ts-ignore
+      method: 'zks_sendRawTransactionWithDetailedOutput',
       params: [signedTx]
     });
 
