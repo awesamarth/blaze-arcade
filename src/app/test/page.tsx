@@ -136,7 +136,6 @@ export default function TestPage() {
         try {
             console.log('Sending transaction...')
 
-            // Use writeContract instead of sendTransaction for better gas estimation
             const hash = await walletClient.writeContract({
                 address: ABSTRACT_UPDATER_ADDRESS as `0x${string}`,
                 abi: UPDATER_ABI,

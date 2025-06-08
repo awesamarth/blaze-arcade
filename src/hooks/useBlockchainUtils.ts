@@ -111,6 +111,29 @@ export function useBlockchainUtils() {
 
     const provider = await embeddedWallet.getEthereumProvider();
 
+    if (chainKey === 'somnia') {
+      // Create signing client with Privy
+      const signingClient = createWalletClient({
+        account: embeddedWallet.address as Hex,
+        chain: config.chain,
+        transport: custom(provider),
+      });
+
+      // Create submission client with your private RPC
+      const submissionClient = createWalletClient({
+        account: embeddedWallet.address as Hex,
+        chain: config.chain,
+        transport: http(process.env.NEXT_PUBLIC_WHAT),
+      }).extend(publicActions);
+
+      // Return combined client - signing methods from Privy, everything else from private RPC
+      return {
+        ...submissionClient, 
+        signTransaction: signingClient.signTransaction,  // Override with Privy signing
+        signMessage: signingClient.signMessage,
+      };
+    }
+
     const baseClient = createWalletClient({
       account: embeddedWallet.address as Hex,
       chain: config.chain,
