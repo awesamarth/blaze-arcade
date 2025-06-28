@@ -33,6 +33,14 @@ const rajdhani = Rajdhani({
 export const metadata: Metadata = {
   title: "Blaze Arcade",
   description: "Latency benchmarking games for your favourite L2s",
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/logo.png', type: 'image/png' }
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/logo.png',
+  },
 };
 
 
@@ -41,8 +49,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const headersList = await headers()
-  const cookies = headersList.get('cookie')
 
   return (
     <html lang="en" suppressHydrationWarning>

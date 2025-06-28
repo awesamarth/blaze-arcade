@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useTheme } from 'next-themes'
 import { Sun, Moon, Menu, X, ChevronDown, ExternalLink, Copy } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
@@ -115,7 +116,14 @@ export const Navbar = () => {
         : "bg-black border-white/10"
     )}>
       {/* Logo/Brand */}
-      <Link href="/" className="flex items-center">
+      <Link href="/" className="flex items-center  gap-3">
+        <Image 
+          src="/logo.png" 
+          alt="Blaze Arcade Logo" 
+          width={32} 
+          height={32}
+          className="w-10 h-10 mb-[5px]"
+        />
         <span className={cn(
           "text-2xl font-bold font-[family-name:var(--font-doom)]",
           isLight ? "text-black" : "text-white"
@@ -138,7 +146,7 @@ export const Navbar = () => {
 
       {/* Nav Items & Controls */}
       <div className={cn(
-        "flex flex-col md:flex-row items-center gap-6 md:gap-8 absolute md:static top-16 left-0 right-0 md:bg-transparent p-6 md:p-0 border-b md:border-0 transition-all duration-300 z-10",
+        "flex flex-col md:flex-row items-center gap-6 md:gap-8 absolute md:static top-15 left-0 right-0 md:bg-transparent p-6 md:p-0 border-b md:border-0 transition-all duration-300 z-10",
         isLight
 
           ? "bg-white border-black/10"
@@ -156,10 +164,10 @@ export const Navbar = () => {
               : "text-white hover:text-purple-400"
           )}
         >
-          Games
+          Play
         </Link>
         <Link
-          href="/leaderboard"
+          href="/stats"
           className={cn(
             "transition-colors",
             isLight
@@ -167,7 +175,7 @@ export const Navbar = () => {
               : "text-white hover:text-purple-400"
           )}
         >
-          Leaderboard
+          Stats
         </Link>
         <Link
           href="/about"

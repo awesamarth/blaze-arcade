@@ -1,8 +1,8 @@
-import { FAUCET_ABI, MEGA_FAUCET_ADDRESS, RISE_FAUCET_ADDRESS, SOMNIA_FAUCET_ADDRESS, ABSTRACT_FAUCET_ADDRESS } from '@/constants';
+import { FAUCET_ABI, MEGA_FAUCET_ADDRESS, RISE_FAUCET_ADDRESS, SOMNIA_FAUCET_ADDRESS } from '@/constants';
 import { NextRequest, NextResponse } from 'next/server';
 import { createWalletClient, http, publicActions, webSocket } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { abstractTestnet, megaethTestnet, somniaTestnet } from 'viem/chains';
+import { megaethTestnet, somniaTestnet } from 'viem/chains';
 import { riseTestnet } from '@/wagmi-config';
 import { eip712WalletActions } from 'viem/zksync';
 
@@ -27,11 +27,6 @@ const riseClient = createWalletClient({
   transport: http()
 }).extend(publicActions)
 
-const abstractClient = createWalletClient({
-  account,
-  chain: abstractTestnet,
-  transport: http()
-}).extend(publicActions).extend(eip712WalletActions())
 
 export async function POST(request: NextRequest) {
   try {
@@ -77,18 +72,6 @@ export async function POST(request: NextRequest) {
 
     }
 
-    else if (chain === "abstract") {
-      const hash = await abstractClient.writeContract({
-        address: ABSTRACT_FAUCET_ADDRESS,
-        abi: FAUCET_ABI,
-        functionName: 'drip',
-        args: [address],
-      })
-
-      const receipt = await abstractClient.waitForTransactionReceipt({ hash });
-      console.log('Abstract faucet transaction mined:', receipt.transactionHash);
-
-    }
 
 
 

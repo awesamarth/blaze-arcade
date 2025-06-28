@@ -13,14 +13,17 @@ export interface Network {
 }
 
 // Available L2 networks
-export const NETWORKS: Network[] = [
+const ALL_NETWORKS: Network[] = [
   { id: 'select', name: 'Select Network', color: 'gray' },
   { id: 'megaeth', name: 'MegaETH', color: 'purple' },
   { id: 'rise', name: 'RISE', color: 'blue' },
   { id: 'somnia', name: 'Somnia', color: 'orange' },
-  { id: 'abstract', name: 'Abstract', color: 'cyan' },
   { id: 'foundry', name: 'Foundry', color: 'green' }
 ]
+
+export const NETWORKS: Network[] = ALL_NETWORKS.filter(network => 
+  network.id !== 'foundry' || process.env.NEXT_PUBLIC_DEV_MODE === 'true'
+)
 
 interface NetworkSelectorProps {
   isWeb3Enabled: boolean
@@ -150,7 +153,6 @@ export function NetworkSelector({
                   selectedNetwork.id === 'rise' && "bg-blue-500",
                   selectedNetwork.id === 'somnia' && "bg-orange-500",
                   selectedNetwork.id === 'foundry' && "bg-green-500",
-                  selectedNetwork.id === 'abstract' && "bg-cyan-500"
 
 
                 )}
@@ -188,7 +190,6 @@ export function NetworkSelector({
                       network.id === 'rise' && "bg-blue-500",
                       network.id === 'somnia' && "bg-orange-500",
                       network.id === 'foundry' && "bg-green-500",
-                      network.id === 'abstract' && "bg-cyan-500" 
 
                     )}
                   />

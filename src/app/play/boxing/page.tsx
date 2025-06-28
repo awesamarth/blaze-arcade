@@ -639,10 +639,10 @@ export default function BoxingGame() {
                             }
 
                             // Make AI more aggressive
-                            this.aiAttackSpeed = Math.max(1500, this.aiAttackSpeed - 30)
+                            this.aiAttackSpeed = Math.max(900, this.aiAttackSpeed - 40)
 
                             // Reduce telegraph warning time (less time to react!)
-                            this.telegraphTime = Math.max(900, this.telegraphTime - 10)
+                            this.telegraphTime = Math.max(800, this.telegraphTime - 10)
 
                             return newScore
                         })
@@ -758,8 +758,8 @@ export default function BoxingGame() {
                         this.gameOver = false
                         this.gameStarted = false
                         this.playerBlocks = 0
-                        this.aiAttackSpeed = 5000
-                        this.telegraphTime = 1500 // Reset telegraph time
+                        this.aiAttackSpeed = 3500
+                        this.telegraphTime = 1500 
 
                         this.showingTelegraph = false
 

@@ -1,10 +1,10 @@
 // src/hooks/useBlockchainUtils.ts
 import { useWallets } from "@privy-io/react-auth";
 import { createWalletClient, custom, Hex, http, publicActions, webSocket } from "viem";
-import { foundry, megaethTestnet, somniaTestnet, abstractTestnet } from "viem/chains";
+import { foundry, megaethTestnet, somniaTestnet } from "viem/chains";
 import { riseTestnet } from "@/wagmi-config";
 import { eip712WalletActions } from 'viem/zksync'
-import { UPDATER_ABI, LOCAL_UPDATER_ADDRESS, MEGA_UPDATER_ADDRESS, RISE_UPDATER_ADDRESS, SOMNIA_UPDATER_ADDRESS, ABSTRACT_UPDATER_ADDRESS } from '@/constants';
+import { UPDATER_ABI, LOCAL_UPDATER_ADDRESS, MEGA_UPDATER_ADDRESS, RISE_UPDATER_ADDRESS, SOMNIA_UPDATER_ADDRESS } from '@/constants';
 
 // Chain configurations
 // Chain configurations
@@ -33,12 +33,6 @@ const CHAIN_CONFIGS = {
     chainId: 31337,
     transport: () => webSocket('ws://127.0.0.1:8545')
   },
-  abstract: {  // Add this new entry
-    chain: abstractTestnet,
-    contractAddress: ABSTRACT_UPDATER_ADDRESS,
-    chainId: 11124,
-    transport: () => http('https://api.testnet.abs.xyz')
-  }
 };
 
 
@@ -140,10 +134,6 @@ export function useBlockchainUtils() {
       transport: custom(provider),
     }).extend(publicActions);
 
-    if (chainKey === 'abstract') {
-      return baseClient.extend(eip712WalletActions());
-    }
-
     return baseClient;
 
   };
@@ -218,7 +208,6 @@ export function useBlockchainUtils() {
     const config = CHAIN_CONFIGS[chainKey as keyof typeof CHAIN_CONFIGS];
     const gas = gasParams[chainKey];
 
-    // Sign transactions in parallel with ZERO RPC calls
     const signingPromises = Array.from({ length: batchSize }, async (_, i) => {
       const txData = {
         account: embeddedWallet.address as Hex,
@@ -229,7 +218,7 @@ export function useBlockchainUtils() {
         maxPriorityFeePerGas: gas.maxPriorityFeePerGas,
         value: 0n,
         type: 'eip1559' as const,
-        gas: chainKey === 'abstract' ? 200000n : 100000n,
+        gas: 100000n,
       };
 
       //@ts-ignore
@@ -271,7 +260,7 @@ export function useBlockchainUtils() {
         maxPriorityFeePerGas: gas.maxPriorityFeePerGas,
         value: 0n,
         type: 'eip1559' as const,
-        gas: chainKey === 'abstract' ? 200000n : 100000n
+        gas: 100000n
       };
 
       //@ts-ignore
@@ -322,9 +311,8 @@ export function useBlockchainUtils() {
       return await sendMegaethTransaction(startTime);
     } else if (chainKey === 'rise') {
       return await sendRiseTransaction(startTime);
-    } else if (chainKey === 'abstract') {
-      return await sendAbstractTransaction(startTime); // Use new detailed endpoint
-    } else {
+    } 
+     else {
       return await sendRegularTransaction(chainKey, startTime);
     }
   };
@@ -359,20 +347,7 @@ export function useBlockchainUtils() {
     return performance.now() - startTime;
   };
 
-  // Abstract: use zks_sendRawTransactionWithDetailedOutput
-  const sendAbstractTransaction = async (startTime: number): Promise<number> => {
-    // Use cached client
-    const client = clientCache['abstract'] || await createChainClient('abstract');
-    const signedTx = getNextTransaction('abstract');
 
-    await client.request({
-      //@ts-ignore
-      method: 'zks_sendRawTransactionWithDetailedOutput',
-      params: [signedTx]
-    });
-
-    return performance.now() - startTime;
-  };
 
   // Foundry and Somnia: send raw transaction and wait for receipt
   const sendRegularTransaction = async (chainKey: string, startTime: number): Promise<number> => {
