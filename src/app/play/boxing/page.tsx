@@ -946,7 +946,7 @@ export default function BoxingGame() {
                                         <li>Each successful attack gives you 1 point and makes AI faster</li>
                                         <li>You have 5 lives - AI hits reduce your lives</li>
                                         {isWeb3Enabled && <li className="text-orange-400">Dark overlay on your character = transaction pending, no actions possible!</li>}
-                                        {isWeb3Enabled && <li className="text-red-400">Slow L2s will cause you to miss block windows!</li>}
+                                        {isWeb3Enabled && <li className="text-red-400">Slow chains will cause you to miss block windows!</li>}
                                     </ul>
                                 </div>
                             </div>

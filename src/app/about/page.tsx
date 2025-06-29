@@ -16,9 +16,9 @@ export default function AboutPage() {
   const isDark = mounted && resolvedTheme === 'dark'
 
   const networks = [
-    { name: 'MegaETH', description: 'Ultra-fast L2 with specialized optimizations', color: 'purple' },
-    { name: 'RISE', description: 'Rising L2 focused on scalability', color: 'blue' },
-    { name: 'Somnia', description: 'Gaming-focused blockchain network', color: 'orange' },
+    { name: 'MegaETH', color: 'purple' },
+    { name: 'RISE',  color: 'blue' },
+    { name: 'Somnia', color: 'orange' },
   ]
 
   const techStack = [

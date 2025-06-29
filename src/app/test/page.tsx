@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createWalletClient, custom, createPublicClient, http, Hex, publicActions } from 'viem'
 import { abstractTestnet } from 'viem/chains'
-import { eip712WalletActions, publicActionsL2 } from 'viem/zksync'
+import { eip712WalletActions } from 'viem/zksync'
 import { useWallets } from "@privy-io/react-auth";
 import { ABSTRACT_UPDATER_ADDRESS, UPDATER_ABI } from '@/constants'
 

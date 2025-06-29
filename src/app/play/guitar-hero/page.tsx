@@ -484,7 +484,7 @@ export default function GuitarHeroGame() {
                                 .then(() => {
                                     // Transaction successful - just update score
                                     setScore(prevScore => {
-                                        const newScore = prevScore + 100
+                                        const newScore = prevScore + 1
                                         // Update the in-game score text
                                         if (this.scoreText) {
                                             this.scoreText.setText(`Score: ${newScore}`)
@@ -504,7 +504,7 @@ export default function GuitarHeroGame() {
                         } else {
                             // Web3 disabled - immediate score update
                             setScore(prevScore => {
-                                const newScore = prevScore + 100
+                                const newScore = prevScore + 1
                                 if (this.scoreText) {
                                     this.scoreText.setText(`Score: ${newScore}`)
                                 }
@@ -767,11 +767,11 @@ export default function GuitarHeroGame() {
                                     <ul className="list-disc pl-5 space-y-1 text-sm text-muted-foreground">
                                         <li>Notes fall down in 4 colored lanes (Red, Green, Blue, Yellow)</li>
                                         <li>Press A/H, S/J, D/K, F/L keys when notes reach the bottom hit zones</li>
-                                        <li>Each successful hit triggers a blockchain transaction and scores 100 points</li>
+                                        <li>Each successful hit triggers a blockchain transaction and scores 1 point</li>
                                         <li className="text-orange-400">Wrong hits (pressing when no note is there) count as mistakes!</li>
                                         {isWeb3Enabled && <li className="text-orange-400">While transactions are confirming, all inputs are locked!</li>}
                                         <li>Make 10 mistakes and the game ends</li>
-                                        <li className="text-red-400">Slow L2s will cause notes to pass by during transaction confirmation = automatic mistakes!</li>
+                                        <li className="text-red-400">Slow chains will cause notes to pass by during transaction confirmation = automatic mistakes!</li>
                                     </ul>
                                 </div>
                             </div>

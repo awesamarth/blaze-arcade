@@ -32,7 +32,7 @@ const rajdhani = Rajdhani({
 
 export const metadata: Metadata = {
   title: "Blaze Arcade",
-  description: "Latency benchmarking games for your favourite L2s",
+  description: "Latency benchmarking games for your favourite EVM chains",
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },

@@ -16,8 +16,8 @@ import { TransactionToast } from '@/components/TransactionToast'
 
 // Game constants
 const GAME_DURATION = 15000 // 15 seconds
-const MOLE_SHOW_TIME = 1500 // How long mole stays visible
-const MOLE_SPAWN_INTERVAL = 200 // Time between potential mole spawns
+const MOLE_SHOW_TIME = 1000 // How long mole stays visible
+const MOLE_SPAWN_INTERVAL = 150 // Time between potential mole spawns
 const GRID_SIZE = 9 // 3x3 grid
 
 enum GameState {

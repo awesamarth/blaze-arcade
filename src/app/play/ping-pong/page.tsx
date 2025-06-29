@@ -477,8 +477,8 @@ export default function PingPongGame() {
               WINDOW_WIDTH - this.playerPaddle.displayWidth / 2
             )
 
-            // Perfect AI - follow ball with slight smoothing
-            this.aiPaddle.x = this.ball.x
+            // AI follows ball with smoothing to prevent ghosting
+            this.aiPaddle.x = Phaser.Math.Linear(this.aiPaddle.x, this.ball.x, 0.15)
 
             // Game over if ball passes bottom edge
             if (this.ball.y > WINDOW_HEIGHT + 20) {

@@ -12,7 +12,7 @@ export interface Network {
   color: string
 }
 
-// Available L2 networks
+// Available chains
 const ALL_NETWORKS: Network[] = [
   { id: 'select', name: 'Select Network', color: 'gray' },
   { id: 'megaeth', name: 'MegaETH', color: 'purple' },
