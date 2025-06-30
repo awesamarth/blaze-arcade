@@ -13,6 +13,7 @@ import { callFaucet } from '@/utils'
 import { LoginPrompt } from '@/components/LoginPrompt'
 import { NetworkPrompt } from '@/components/NetworkPrompt'
 import { TransactionToast } from '@/components/TransactionToast'
+import { ChoppyModal } from '@/components/ChoppyModal'
 
 export default function BoxingGame() {
     const { resolvedTheme } = useTheme()
@@ -25,6 +26,8 @@ export default function BoxingGame() {
     const [isMounted, setIsMounted] = useState(false)
     const [score, setScore] = useState(0)
     const [lives, setLives] = useState(5)
+    const [showChoppyModal, setShowChoppyModal] = useState(false)
+    const [gameOver, setGameOver] = useState(false)
 
     const gameRef = useRef<HTMLDivElement>(null)
     const gameInstanceRef = useRef<any>(null)
@@ -38,6 +41,17 @@ export default function BoxingGame() {
     useEffect(() => {
         setIsMounted(true)
     }, [])
+
+    // Show ChoppyModal when game ends with Web3 enabled (once per session)
+    useEffect(() => {
+        if (gameOver && isWeb3Enabled && selectedNetwork.id !== 'select') {
+            const hasSeenModal = sessionStorage.getItem('hasSeenChoppyModal')
+            if (!hasSeenModal) {
+                setShowChoppyModal(true)
+                sessionStorage.setItem('hasSeenChoppyModal', 'true')
+            }
+        }
+    }, [gameOver, isWeb3Enabled, selectedNetwork.id])
 
     useEffect(() => {
         isInitializingRef.current = isInitializing
@@ -736,6 +750,7 @@ export default function BoxingGame() {
 
                     handleGameOver() {
                         this.gameOver = true
+                        setGameOver(true) // Add this line to update React state
 
                         if (this.gameOverContainer) {
                             this.gameOverContainer.setVisible(true)
@@ -760,6 +775,7 @@ export default function BoxingGame() {
                         this.playerBlocks = 0
                         this.aiAttackSpeed = 3500
                         this.telegraphTime = 1500 
+                        setGameOver(false) // Add this line to update React state
 
                         this.showingTelegraph = false
 
@@ -952,6 +968,11 @@ export default function BoxingGame() {
                             </div>
                         )}
                     </div>
+
+                    <ChoppyModal
+                        isOpen={showChoppyModal}
+                        onClose={() => setShowChoppyModal(false)}
+                    />
                 </>
             )}
         </div>

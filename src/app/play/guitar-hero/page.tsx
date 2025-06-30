@@ -13,6 +13,7 @@ import { callFaucet } from '@/utils'
 import { LoginPrompt } from '@/components/LoginPrompt'
 import { NetworkPrompt } from '@/components/NetworkPrompt'
 import { TransactionToast } from '@/components/TransactionToast'
+import { ChoppyModal } from '@/components/ChoppyModal'
 
 export default function GuitarHeroGame() {
     const { resolvedTheme } = useTheme()
@@ -25,6 +26,8 @@ export default function GuitarHeroGame() {
     const [isMounted, setIsMounted] = useState(false)
     const [score, setScore] = useState(0)
     const [mistakes, setMistakes] = useState(0)
+    const [showChoppyModal, setShowChoppyModal] = useState(false)
+    const [gameOver, setGameOver] = useState(false)
 
     const gameRef = useRef<HTMLDivElement>(null)
     const gameInstanceRef = useRef<any>(null)
@@ -38,6 +41,17 @@ export default function GuitarHeroGame() {
     useEffect(() => {
         setIsMounted(true)
     }, [])
+
+    // Show ChoppyModal when game ends with Web3 enabled (once per session)
+    useEffect(() => {
+        if (gameOver && isWeb3Enabled && selectedNetwork.id !== 'select') {
+            const hasSeenModal = sessionStorage.getItem('hasSeenChoppyModal')
+            if (!hasSeenModal) {
+                setShowChoppyModal(true)
+                sessionStorage.setItem('hasSeenChoppyModal', 'true')
+            }
+        }
+    }, [gameOver, isWeb3Enabled, selectedNetwork.id])
 
     useEffect(() => {
         isInitializingRef.current = isInitializing
@@ -557,6 +571,7 @@ export default function GuitarHeroGame() {
 
                     handleGameOver() {
                         this.gameOver = true
+                        setGameOver(true) // Add this line to update React state
 
                         if (this.gameOverText) {
                             this.gameOverText.setVisible(true)
@@ -576,6 +591,7 @@ export default function GuitarHeroGame() {
                         this.gameStarted = false
                         this.currentNoteSpeed = 130
                         this.successfulHits = 0
+                        setGameOver(false) // Add this line to update React state
 
                         // Clear all notes
                         this.notes.forEach(note => note.sprite.destroy())
@@ -777,6 +793,11 @@ export default function GuitarHeroGame() {
                             </div>
                         )}
                     </div>
+
+                    <ChoppyModal
+                        isOpen={showChoppyModal}
+                        onClose={() => setShowChoppyModal(false)}
+                    />
                 </>
             )}
         </div>

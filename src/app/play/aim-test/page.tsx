@@ -11,6 +11,7 @@ import { getEmbeddedConnectedWallet, useWallets } from '@privy-io/react-auth'
 import { callFaucet } from '@/utils'
 import { LoginPrompt } from '@/components/LoginPrompt'
 import { NetworkPrompt } from '@/components/NetworkPrompt'
+import { ChoppyModal } from '@/components/ChoppyModal'
 
 enum GameState {
     IDLE = 'idle',
@@ -47,6 +48,7 @@ export default function AimTestGame() {
     const [showToast, setShowToast] = useState(false)
     const [isInitializing, setIsInitializing] = useState(false)
     const [isMounted, setIsMounted] = useState(false)
+    const [showChoppyModal, setShowChoppyModal] = useState(false)
 
     const gameAreaRef = useRef<HTMLDivElement>(null)
     const targetRef = useRef<HTMLDivElement>(null)
@@ -90,6 +92,17 @@ export default function AimTestGame() {
     useEffect(() => {
         setIsMounted(true)
     }, [])
+
+    // Show ChoppyModal when game finishes with Web3 enabled (once per session)
+    useEffect(() => {
+        if (gameState === GameState.FINISHED && isWeb3Enabled && selectedNetwork.id !== 'select') {
+            const hasSeenModal = sessionStorage.getItem('hasSeenChoppyModal')
+            if (!hasSeenModal) {
+                setShowChoppyModal(true)
+                sessionStorage.setItem('hasSeenChoppyModal', 'true')
+            }
+        }
+    }, [gameState, isWeb3Enabled, selectedNetwork.id])
 
     const generateRandomTarget = (): Target => {
         if (!gameAreaRef.current) return { id: 0, x: 50, y: 50, spawnTime: Date.now() }
@@ -428,6 +441,11 @@ export default function AimTestGame() {
                             </div>
                         )}
                     </div>
+
+                    <ChoppyModal
+                        isOpen={showChoppyModal}
+                        onClose={() => setShowChoppyModal(false)}
+                    />
                 </>
             )}
         </div>

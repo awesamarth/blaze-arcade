@@ -11,6 +11,7 @@ import { getEmbeddedConnectedWallet, useWallets } from '@privy-io/react-auth'
 import { callFaucet } from '@/utils'
 import { LoginPrompt } from '@/components/LoginPrompt'
 import { NetworkPrompt } from '@/components/NetworkPrompt'
+import { ChoppyModal } from '@/components/ChoppyModal'
 
 enum GameState {
   IDLE = 'idle',
@@ -38,6 +39,7 @@ export default function ReactionTimeGame() {
   const [txStartTime, setTxStartTime] = useState(0)
   const [isInitializing, setIsInitializing] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+  const [showChoppyModal, setShowChoppyModal] = useState(false)
 
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const readyTimeRef = useRef<number>(0)
@@ -142,6 +144,17 @@ export default function ReactionTimeGame() {
   useEffect(() => {
     return clearAllTimers;
   }, [clearAllTimers]);
+
+  // Show choppy modal when game finishes with Web3 enabled
+  useEffect(() => {
+    if (gameState === GameState.FINISHED && isWeb3Enabled && selectedNetwork.id !== 'select') {
+      const hasSeenModal = sessionStorage.getItem('hasSeenChoppyModal');
+      if (!hasSeenModal) {
+        setShowChoppyModal(true);
+        sessionStorage.setItem('hasSeenChoppyModal', 'true');
+      }
+    }
+  }, [gameState, isWeb3Enabled, selectedNetwork.id]);
 
   const handleClick = useCallback(async () => {
     if (isInitializing) return;
@@ -255,7 +268,13 @@ export default function ReactionTimeGame() {
   }, [gameState, attempts, startGame, isWeb3Enabled, selectedNetwork.id, clearAllTimers, sendUpdate]);
 
   const handleToggleWeb3 = async (enabled: boolean) => {
-    if (gameState === GameState.PENDING || isInitializing) return;
+
+    
+    if (gameState === GameState.PENDING || isInitializing) {
+      console.log('Blocked by guard condition');
+      return;
+    }
+    
     setIsWeb3Enabled(enabled);
   };
 
@@ -466,6 +485,18 @@ export default function ReactionTimeGame() {
             )}
           </div>
         </>)}
+
+      <ChoppyModal
+        isOpen={showChoppyModal}
+        onClose={() => {
+          setShowChoppyModal(false);
+        }}
+        onTurnOffWeb3={() => {
+          handleToggleWeb3(false);
+          setShowChoppyModal(false);
+        }}
+        networkName={selectedNetwork.name}
+      />
     </div>
   );
 }

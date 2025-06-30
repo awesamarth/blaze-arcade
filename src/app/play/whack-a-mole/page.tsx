@@ -13,6 +13,7 @@ import { callFaucet } from '@/utils'
 import { LoginPrompt } from '@/components/LoginPrompt'
 import { NetworkPrompt } from '@/components/NetworkPrompt'
 import { TransactionToast } from '@/components/TransactionToast'
+import { ChoppyModal } from '@/components/ChoppyModal'
 
 // Game constants
 const GAME_DURATION = 15000 // 15 seconds
@@ -57,6 +58,7 @@ export default function WhackAMoleGame() {
     const [showToast, setShowToast] = useState(false)
     const [isInitializing, setIsInitializing] = useState(false)
     const [isMounted, setIsMounted] = useState(false)
+    const [showChoppyModal, setShowChoppyModal] = useState(false)
 
     // Refs for game logic
     const gameTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -76,6 +78,17 @@ export default function WhackAMoleGame() {
     useEffect(() => {
         setIsMounted(true)
     }, [])
+
+    // Show ChoppyModal when game finishes with Web3 enabled (once per session)
+    useEffect(() => {
+        if (gameState === GameState.FINISHED && isWeb3Enabled && selectedNetwork.id !== 'select') {
+            const hasSeenModal = sessionStorage.getItem('hasSeenChoppyModal')
+            if (!hasSeenModal) {
+                setShowChoppyModal(true)
+                sessionStorage.setItem('hasSeenChoppyModal', 'true')
+            }
+        }
+    }, [gameState, isWeb3Enabled, selectedNetwork.id])
 
     // Update refs when state changes
     useEffect(() => {
@@ -595,6 +608,11 @@ export default function WhackAMoleGame() {
                             </div>
                         )}
                     </div>
+
+                    <ChoppyModal
+                        isOpen={showChoppyModal}
+                        onClose={() => setShowChoppyModal(false)}
+                    />
                 </>
             )}
         </div>

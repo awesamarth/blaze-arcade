@@ -12,6 +12,7 @@ import { getEmbeddedConnectedWallet, useWallets } from '@privy-io/react-auth'
 import { callFaucet } from '@/utils'
 import { LoginPrompt } from '@/components/LoginPrompt'
 import { NetworkPrompt } from '@/components/NetworkPrompt'
+import { ChoppyModal } from '@/components/ChoppyModal'
 
 // Number of words to test with
 const WORD_COUNT = 20;
@@ -50,6 +51,7 @@ export default function TypingTestGame() {
     const [showToast, setShowToast] = useState(false)
     const [isInitializing, setIsInitializing] = useState(false)
     const [isMounted, setIsMounted] = useState(false)
+    const [showChoppyModal, setShowChoppyModal] = useState(false)
 
     // Refs
     const inputRef = useRef<HTMLInputElement>(null)
@@ -110,6 +112,17 @@ export default function TypingTestGame() {
     useEffect(() => {
         setIsMounted(true)
     }, [])
+
+    // Show choppy modal when game finishes with Web3 enabled
+    useEffect(() => {
+        if (gameState === GameState.FINISHED && isWeb3Enabled && selectedNetwork.id !== 'select') {
+            const hasSeenModal = sessionStorage.getItem('hasSeenChoppyModal');
+            if (!hasSeenModal) {
+                setShowChoppyModal(true);
+                sessionStorage.setItem('hasSeenChoppyModal', 'true');
+            }
+        }
+    }, [gameState, isWeb3Enabled, selectedNetwork.id]);
 
     useEffect(() => {
         if (gameState === GameState.PLAYING && inputRef.current) {
@@ -608,6 +621,16 @@ export default function TypingTestGame() {
                     </div>
                 </>
             )}
+
+            <ChoppyModal
+                isOpen={showChoppyModal}
+                onClose={() => setShowChoppyModal(false)}
+                onTurnOffWeb3={() => {
+                    handleToggleWeb3(false);
+                    setShowChoppyModal(false);
+                }}
+                networkName={selectedNetwork.name}
+            />
         </div>
     );
 }

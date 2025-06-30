@@ -12,6 +12,7 @@ import { getEmbeddedConnectedWallet, useWallets } from '@privy-io/react-auth'
 import { callFaucet } from '@/utils'
 import { LoginPrompt } from '@/components/LoginPrompt'
 import { NetworkPrompt } from '@/components/NetworkPrompt'
+import { ChoppyModal } from '@/components/ChoppyModal'
 
 export default function PingPongGame() {
   const { resolvedTheme } = useTheme()
@@ -23,6 +24,8 @@ export default function PingPongGame() {
   const [isInitializing, setIsInitializing] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   const [score, setScore] = useState({ player: 0 })
+  const [showChoppyModal, setShowChoppyModal] = useState(false)
+  const [gameOver, setGameOver] = useState(false)
 
 
   const gameRef = useRef<HTMLDivElement>(null)
@@ -41,6 +44,17 @@ export default function PingPongGame() {
   useEffect(() => {
     setIsMounted(true)
   }, [])
+
+  // Show ChoppyModal when game ends with Web3 enabled (once per session)
+  useEffect(() => {
+    if (gameOver && isWeb3Enabled && selectedNetwork.id !== 'select') {
+      const hasSeenModal = sessionStorage.getItem('hasSeenChoppyModal')
+      if (!hasSeenModal) {
+        setShowChoppyModal(true)
+        sessionStorage.setItem('hasSeenChoppyModal', 'true')
+      }
+    }
+  }, [gameOver, isWeb3Enabled, selectedNetwork.id])
 
   useEffect(() => {
     isInitializingRef.current = isInitializing;
@@ -300,6 +314,7 @@ export default function PingPongGame() {
 
                       // Handle game over due to transaction failure
                       gameState.gameOver = true
+                      setGameOver(true) // Add this line to update React state
 
                       // Update game over text for transaction failure
                       this.gameOverText.setText('Transaction Failed!')
@@ -404,7 +419,7 @@ export default function PingPongGame() {
               gameState.gameOver = false
               gameState.playerScore = 0
               gameState.started = true
-
+              setGameOver(false) // Add this line to update React state
 
               transactionPendingRef.current = false
               setScore({ player: 0 })
@@ -483,6 +498,7 @@ export default function PingPongGame() {
             // Game over if ball passes bottom edge
             if (this.ball.y > WINDOW_HEIGHT + 20) {
               gameState.gameOver = true
+              setGameOver(true) // Add this line to update React state
 
               // Show game over text
               this.gameOverText.setText('Game Over!')
@@ -655,6 +671,11 @@ export default function PingPongGame() {
               </div>
             )}
           </div>
+
+          <ChoppyModal
+            isOpen={showChoppyModal}
+            onClose={() => setShowChoppyModal(false)}
+          />
         </>
       )}
     </div>
