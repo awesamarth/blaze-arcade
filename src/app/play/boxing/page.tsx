@@ -972,6 +972,11 @@ export default function BoxingGame() {
                     <ChoppyModal
                         isOpen={showChoppyModal}
                         onClose={() => setShowChoppyModal(false)}
+                        onTurnOffWeb3={() => {
+                            handleToggleWeb3(false);
+                            setShowChoppyModal(false);
+                        }}
+                        networkName={selectedNetwork.name}
                     />
                 </>
             )}
