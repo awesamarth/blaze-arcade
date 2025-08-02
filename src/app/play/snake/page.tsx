@@ -129,13 +129,12 @@ export default function SnakeGame() {
 
                     // Game state
                     direction: string = 'right'
-                    nextDirection: string = 'right'
+                    directionQueue: string[] = []
                     gameStarted: boolean = false
                     gameOver: boolean = false
                     moveTime: number = 0
-                    moveInterval: number = 150 // Time between moves in ms
+                    moveInterval: number = 150 
                     keyPressTime: number = 0
-                    keyPressCooldown: number = 50 // ms between allowed key presses
 
                     constructor() {
                         super({ key: 'SnakeScene' })
@@ -308,7 +307,7 @@ export default function SnakeGame() {
 
                         // Reset direction
                         this.direction = 'right'
-                        this.nextDirection = 'right'
+                        this.directionQueue = []
                         currentDirectionRef.current = 'right'
                         pendingDirectionRef.current = null
                     }
@@ -318,15 +317,6 @@ export default function SnakeGame() {
                         if (this.gameOver || isInitializingRef.current) {
                             return;
                         }
-
-                        // Check for key press cooldown
-                        const currentTime = this.time.now;
-                        if (currentTime < this.keyPressTime) {
-                            return; // Still in cooldown period
-                        }
-
-                        // Set next allowed key press time
-                        this.keyPressTime = currentTime + this.keyPressCooldown;
 
                         // Start the game if not started yet
                         if (!this.gameStarted) {
@@ -343,18 +333,28 @@ export default function SnakeGame() {
                             down: 'up'
                         }
 
+                        // Get the last direction in queue, or current direction if queue is empty
+                        const lastDirection = this.directionQueue.length > 0 
+                            ? this.directionQueue[this.directionQueue.length - 1] 
+                            : this.direction;
+
                         // Don't allow reversing direction
-                        if (opposites[newDirection] === this.direction) {
+                        if (opposites[newDirection] === lastDirection) {
                             return
                         }
 
-                        // Don't trigger blockchain if direction hasn't actually changed
-                        if (newDirection === this.nextDirection) {
+                        // Don't add duplicate directions
+                        if (newDirection === lastDirection) {
                             return
                         }
 
                         // Process direction change
                         if (isWeb3Enabled && selectedNetwork.id !== 'select') {
+                            // Block new inputs if transaction is pending
+                            if (transactionPendingRef.current) {
+                                return;
+                            }
+
                             // Store the pending direction for after transaction completes
                             pendingDirectionRef.current = newDirection;
 
@@ -365,8 +365,10 @@ export default function SnakeGame() {
                             // Send transaction and update direction when complete
                             sendUpdate(selectedNetwork.id)
                                 .then(() => {
-                                    // Update direction after transaction completes
-                                    this.nextDirection = pendingDirectionRef.current || this.nextDirection;
+                                    // Add direction to queue after transaction completes
+                                    if (pendingDirectionRef.current) {
+                                        this.directionQueue.push(pendingDirectionRef.current);
+                                    }
                                     currentDirectionRef.current = pendingDirectionRef.current;
                                     pendingDirectionRef.current = null;
                                     transactionPendingRef.current = false;
@@ -379,21 +381,17 @@ export default function SnakeGame() {
                                     setShowToast(false);
                                     this.handleGameOver();
                                 });
-
-                            // Important: Keep moving in current direction while transaction is pending
-                            // Don't modify this.nextDirection until the transaction completes
                         } else {
-                            // Without blockchain, just update direction immediately
-                            this.nextDirection = newDirection;
+                            // Without blockchain, add direction to queue immediately
+                            this.directionQueue.push(newDirection);
                             currentDirectionRef.current = newDirection;
                         }
                     }
 
                     moveSnake() {
-                        // If transaction pending for direction change, keep moving in current direction
-                        if (!transactionPendingRef.current) {
-                            // Only update direction if no transaction is pending
-                            this.direction = this.nextDirection;
+                        // Consume next direction from queue
+                        if (this.directionQueue.length > 0) {
+                            this.direction = this.directionQueue.shift()!;
                         }
 
                         // Calculate new head position
