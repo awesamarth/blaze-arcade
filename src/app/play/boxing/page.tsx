@@ -121,8 +121,8 @@ export default function BoxingGame() {
                     gameOverText: Phaser.GameObjects.Text | null = null
                     startText: Phaser.GameObjects.Text | null = null
                     restartButton: Phaser.GameObjects.Text | null = null
-                    playerGlove: Phaser.GameObjects.Text | null = null
-                    aiGlove: Phaser.GameObjects.Text | null = null
+                    playerGlove: Phaser.GameObjects.Image | null = null
+                    aiGlove: Phaser.GameObjects.Image | null = null
                     playerAnimating: boolean = false
                     aiAnimating: boolean = false
                     gameStarted: boolean = false
@@ -158,11 +158,19 @@ export default function BoxingGame() {
                             event.stopPropagation();
                         });
 
-                        this.createCharacters()
-                        this.createUI()
-                        this.setupControls()
-                        this.updateStartText()
-                        this.scheduleNextAiAttack()
+                        // Load glove images
+                        this.load.image('blue-glove', '/blue-glove.png')
+                        this.load.image('red-glove', '/red-glove.png')
+                        
+                        this.load.once('complete', () => {
+                            this.createCharacters()
+                            this.createUI()
+                            this.setupControls()
+                            this.updateStartText()
+                            this.scheduleNextAiAttack()
+                        })
+                        
+                        this.load.start()
                     }
 
                     createCharacters() {
@@ -233,13 +241,11 @@ export default function BoxingGame() {
                             0xffffff
                         )
 
-                        this.playerGlove = this.add.text(
-                            GAME_WIDTH / 2 - 30,  // Position so punch reaches into AI's space
+                        this.playerGlove = this.add.image(
+                            GAME_WIDTH / 2 - 30, 
                             GAME_HEIGHT / 2 - 20,
-                            '🥊',
-                            { fontSize: '32px' }
-                        ).setOrigin(0.5).setRotation(Math.PI / 2).setTint(0x99ccff).setDepth(10) // Even lighter blue
-                        // Lighter blue tint!
+                            'blue-glove'
+                        ).setOrigin(0.5).setScale(0.11).setFlipX(true).setAngle(90).setDepth(10) // Even smaller, attached to player
 
                         // Player transaction overlay (hidden initially)
                         this.playerOverlay = this.add.rectangle(
@@ -253,7 +259,7 @@ export default function BoxingGame() {
 
                         // AI (right side) - move much closer to center
                         this.ai = this.add.rectangle(
-                            GAME_WIDTH / 2 + 80,  // Much closer to center
+                            GAME_WIDTH / 2 + 80,  
                             GAME_HEIGHT / 2,
                             AI_SIZE,
                             AI_SIZE * 1.75,
@@ -267,12 +273,11 @@ export default function BoxingGame() {
                             0xffffff
                         )
 
-                        this.aiGlove = this.add.text(
-                            GAME_WIDTH / 2 + 30,  // Position so punch reaches into player's space
+                        this.aiGlove = this.add.image(
+                            GAME_WIDTH / 2 + 30,  // Closer to center, attached to AI fighter
                             GAME_HEIGHT / 2 - 20,
-                            '🥊',
-                            { fontSize: '32px' }
-                        ).setOrigin(0.5).setRotation(-Math.PI / 2).setDepth(5)
+                            'red-glove'
+                        ).setOrigin(0.5).setScale(0.11).setAngle(-90).setDepth(5) // Even smaller, attached to AI
 
 
                     }
@@ -489,9 +494,8 @@ export default function BoxingGame() {
                             this.playerAnimating = true;
                             this.tweens.add({
                                 targets: this.playerGlove,
-                                rotation: 0, // Point up
+                                angle: 0, // Rotate to pointing up (blocking position)
                                 duration: 150,
-                                // Remove yoyo: true so it stays in up position
                                 ease: 'Power2',
                                 onComplete: () => {
                                     this.playerAnimating = false;
@@ -597,7 +601,7 @@ export default function BoxingGame() {
                         if (this.playerGlove) {
                             this.tweens.add({
                                 targets: this.playerGlove,
-                                rotation: Math.PI / 2, // Back to pointing right
+                                angle: 90, // Back to facing right position
                                 duration: 100,
                                 ease: 'Power2'
                             })
