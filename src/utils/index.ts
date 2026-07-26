@@ -1,7 +1,9 @@
+import { megaethTestnet } from 'viem/chains';
+
 export const getChainId = (networkId: string): number => {
   switch(networkId) {
     case 'foundry': return 31337;
-    case 'megaeth': return 6342;
+    case 'megaeth': return megaethTestnet.id;
     case 'rise': return 11155931;
     case 'somnia': return 50312;
     case 'abstract': return 11124

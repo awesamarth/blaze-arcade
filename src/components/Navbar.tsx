@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { useLogin, usePrivy, useWallets } from '@privy-io/react-auth'
 import { useBalance } from 'wagmi'
 import { formatEther } from 'viem'
+import { megaethTestnet } from 'viem/chains'
 
 export const Navbar = () => {
   const { theme, setTheme } = useTheme()
@@ -72,7 +73,7 @@ export const Navbar = () => {
     switch (chainId) {
       case 31337: // Foundry
         return 'https://chain.link/faucets';
-      case 6342: // Mega Testnet
+      case megaethTestnet.id: // Mega Testnet
         return 'https://testnet.megaeth.com';
       case 50312: // Somnia Testnet
         return 'https://testnet.somnia.network/';

@@ -12,7 +12,7 @@ const CHAIN_CONFIGS = {
   megaeth: {
     chain: megaethTestnet,
     contractAddress: MEGA_UPDATER_ADDRESS,
-    chainId: 6342,
+    chainId: megaethTestnet.id,
     transport: () => http('https://carrot.megaeth.com/rpc')
   },
   rise: {
